@@ -33,7 +33,7 @@ function setup(failDeleteIds: number[] = []) {
 }
 
 describe('runCheckout', () => {
-  it('achète les produits cochés, supprime les textes libres, ignore les non cochés', async () => {
+  it('purchases checked products, deletes free-text lines, ignores unchecked ones', async () => {
     const { purchase, deleteShoppingLine, local, deps } = setup();
     local[1] = { paidUnitPrice: 1.5, bestBefore: '2026-12-01' };
     const r = await runCheckout(
@@ -57,7 +57,7 @@ describe('runCheckout', () => {
     expect(r.errors).toHaveLength(0);
   });
 
-  it('ne rajoute pas au stock si la suppression avait échoué (flag stocked)', async () => {
+  it('does not add stock twice if the deletion had failed (stocked flag)', async () => {
     const { purchase, deps } = setup([1]);
     const l = line({ id: 1, product_id: 10 });
     const r1 = await runCheckout([l], null, deps);
@@ -65,7 +65,7 @@ describe('runCheckout', () => {
     expect(purchase).toHaveBeenCalledTimes(1);
 
     const ok = setup();
-    // même stockage local, client qui réussit cette fois
+    // same local storage, client that succeeds this time
     const r2 = await runCheckout([l], null, { ...ok.deps, getLocal: deps.getLocal, patchLocal: deps.patchLocal });
     expect(ok.purchase).not.toHaveBeenCalled();
     expect(ok.deleteShoppingLine).toHaveBeenCalledWith(1);
@@ -74,7 +74,7 @@ describe('runCheckout', () => {
 });
 
 describe('linesMissingBestBefore', () => {
-  it('seulement les produits cochés sans date', () => {
+  it('only checked products without a date', () => {
     const local: LocalDataMap = { 2: { bestBefore: '2026-12-01' }, 3: { paidUnitPrice: 1 } };
     const r = linesMissingBestBefore(
       [

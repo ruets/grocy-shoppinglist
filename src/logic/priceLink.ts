@@ -1,9 +1,9 @@
 import { formatInput, parseDecimal } from './numbers';
 
 /**
- * Lien bidirectionnel prix unitaire ↔ total de ligne.
- * Le champ édité en dernier (« ancre ») est conservé quand la quantité change ;
- * l'autre est recalculé.
+ * Two-way link between unit price and line total.
+ * The last edited field (the "anchor") is kept when the amount changes;
+ * the other one is recomputed.
  */
 export type PriceAnchor = 'unit' | 'total';
 
@@ -54,8 +54,8 @@ export function priceLinkReducer(state: PriceLinkState, action: PriceLinkAction)
 }
 
 /**
- * Prix unitaire à enregistrer (pleine précision, calculé depuis l'ancre),
- * ou null si aucun prix saisi.
+ * Unit price to store (full precision, computed from the anchor),
+ * or null when no price was entered.
  */
 export function effectiveUnitPrice(state: PriceLinkState): number | null {
   if (state.anchor === 'total') {

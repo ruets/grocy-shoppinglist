@@ -1,6 +1,6 @@
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Convention Grocy pour « ne périme pas ». */
+/** Grocy convention for "never expires". */
 export const NEVER_EXPIRES = '2999-12-31';
 
 export function toIsoDate(d: Date): string {
@@ -18,9 +18,9 @@ function build(y: number, m: number, d: number): Date | null {
 }
 
 /**
- * Formats acceptés → AAAA-MM-JJ :
- * « JJ/MM/AAAA », « JJ/MM/AA », « AAAA-MM-JJ », « JJMMAAAA », « JJMMAA »,
- * et sans année « JJ/MM » ou « JJMM » : année courante, ou suivante si la date est déjà passée.
+ * Accepted formats → YYYY-MM-DD:
+ * "DD/MM/YYYY", "DD/MM/YY", "YYYY-MM-DD", "DDMMYYYY", "DDMMYY",
+ * and without a year "DD/MM" or "DDMM": current year, or next year if the date has already passed.
  */
 export function parseUserDate(input: string, today = new Date()): string | null {
   const s = input.trim();
@@ -55,14 +55,14 @@ export function parseUserDate(input: string, today = new Date()): string | null 
   return date ? toIsoDate(date) : null;
 }
 
-/** AAAA-MM-JJ → JJ/MM/AAAA */
+/** YYYY-MM-DD → DD/MM/YYYY */
 export function formatIsoDateFr(iso: string | null | undefined): string {
   if (!iso) return '';
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
-/** Comme formatIsoDateFr, mais « jamais » pour NEVER_EXPIRES. */
+/** Like formatIsoDateFr, but « jamais » (never) for NEVER_EXPIRES. */
 export function formatBestBefore(iso: string | null | undefined): string {
   if (iso === NEVER_EXPIRES) return 'jamais';
   return formatIsoDateFr(iso);
@@ -74,8 +74,8 @@ export function addDays(days: number, from = new Date()): string {
 }
 
 /**
- * Date issue de la durée par défaut du produit (Grocy `default_best_before_days`) :
- * -1 → ne périme pas, > 0 → aujourd'hui + N jours, sinon null (pas de défaut utile).
+ * Date derived from the product's default shelf life (Grocy `default_best_before_days`):
+ * -1 → never expires, > 0 → today + N days, otherwise null (no useful default).
  */
 export function productDefaultBestBefore(days: number | null | undefined, today = new Date()): string | null {
   if (days === -1) return NEVER_EXPIRES;

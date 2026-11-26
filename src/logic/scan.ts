@@ -1,11 +1,11 @@
 import type { ShoppingLine } from '../api/grocy';
 
 export type ScanDecision =
-  /** Ligne non cochée trouvée : modale d'achat avec la quantité de la ligne. */
+  /** Unchecked line found: purchase modal with the line's amount. */
   | { kind: 'line'; line: ShoppingLine; amount: number }
-  /** Déjà dans le panier : modale d'achat avec quantité + 1. */
+  /** Already in the cart: purchase modal with amount + 1. */
   | { kind: 'inCart'; line: ShoppingLine; amount: number }
-  /** Produit absent de la liste : achat « hors liste ». */
+  /** Product not on the list: off-list purchase. */
   | { kind: 'offList'; amount: number };
 
 export function decideScan(productId: number, lines: ShoppingLine[]): ScanDecision {

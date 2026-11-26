@@ -1,4 +1,4 @@
-/** Minuscule, sans accents ni espaces superflus. */
+/** Lowercase, without accents or extra whitespace. */
 export function normalizeText(s: string): string {
   return s
     .normalize('NFD')
@@ -9,8 +9,8 @@ export function normalizeText(s: string): string {
 }
 
 /**
- * Recherche insensible aux accents/casse : tous les mots de la requête doivent
- * être présents. Les noms qui commencent par la requête passent en premier.
+ * Accent/case-insensitive search: every word of the query must be present.
+ * Names that start with the query come first.
  */
 export function searchByName<T extends { name: string }>(items: T[], query: string, limit = 30): T[] {
   const q = normalizeText(query);

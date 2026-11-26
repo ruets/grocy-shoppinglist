@@ -7,7 +7,7 @@ import {
 import { formatInput, parseDecimal } from '../numbers';
 
 describe('parseDecimal / formatInput', () => {
-  it('accepte la virgule, les espaces et le symbole €', () => {
+  it('accepts comma, spaces and the € sign', () => {
     expect(parseDecimal('1,20')).toBe(1.2);
     expect(parseDecimal(' 3.5 ')).toBe(3.5);
     expect(parseDecimal('2,5 €')).toBe(2.5);
@@ -16,7 +16,7 @@ describe('parseDecimal / formatInput', () => {
     expect(parseDecimal('abc')).toBeNull();
     expect(parseDecimal('1,2,3')).toBeNull();
   });
-  it('affiche avec une virgule, arrondi à 2 décimales', () => {
+  it('formats with a comma, rounded to 2 decimals', () => {
     expect(formatInput(1.2)).toBe('1,2');
     expect(formatInput(1.005)).toBe('1,01');
     expect(formatInput(3.3333)).toBe('3,33');
@@ -24,13 +24,13 @@ describe('parseDecimal / formatInput', () => {
   });
 });
 
-describe('lien prix unitaire ↔ total', () => {
-  it('préremplit total depuis le dernier prix', () => {
+describe('unit price ↔ total link', () => {
+  it('prefills the total from the last price', () => {
     const s = initPriceLink(3, 1.2);
     expect(s).toMatchObject({ unitText: '1,2', totalText: '3,6', anchor: 'unit' });
   });
 
-  it('saisie du prix unitaire → total recalculé', () => {
+  it('typing the unit price → total recomputed', () => {
     let s = initPriceLink(2, null);
     s = r(s, { type: 'unit', text: '1,25' });
     expect(s.totalText).toBe('2,5');
@@ -38,29 +38,29 @@ describe('lien prix unitaire ↔ total', () => {
     expect(effectiveTotal(s)).toBe(2.5);
   });
 
-  it('saisie du total → prix unitaire recalculé', () => {
+  it('typing the total → unit price recomputed', () => {
     let s = initPriceLink(3, 1);
     s = r(s, { type: 'total', text: '3,50' });
     expect(s.anchor).toBe('total');
     expect(s.unitText).toBe('1,17');
-    // prix unitaire en pleine précision (4 décimales), pas l'arrondi affiché
+    // full-precision unit price (4 decimals), not the rounded display
     expect(effectiveUnitPrice(s)).toBe(1.1667);
     expect(effectiveTotal(s)).toBe(3.5);
   });
 
-  it('changement de quantité : conserve le champ ancre', () => {
-    let s = initPriceLink(1, 2); // ancre = unit
+  it('amount change keeps the anchor field', () => {
+    let s = initPriceLink(1, 2); // anchor = unit
     s = r(s, { type: 'qty', qty: 4 });
     expect(s.unitText).toBe('2');
     expect(s.totalText).toBe('8');
 
-    s = r(s, { type: 'total', text: '10' }); // ancre = total
+    s = r(s, { type: 'total', text: '10' }); // anchor = total
     s = r(s, { type: 'qty', qty: 5 });
     expect(s.totalText).toBe('10');
     expect(s.unitText).toBe('2');
   });
 
-  it('vider un champ vide l’autre', () => {
+  it('clearing one field clears the other', () => {
     let s = initPriceLink(2, 1);
     s = r(s, { type: 'unit', text: '' });
     expect(s.totalText).toBe('');
@@ -71,7 +71,7 @@ describe('lien prix unitaire ↔ total', () => {
     expect(s.unitText).toBe('');
   });
 
-  it('quantité 0 avec ancre total : pas de division par zéro', () => {
+  it('amount 0 with total anchor: no division by zero', () => {
     let s = initPriceLink(2, null);
     s = r(s, { type: 'total', text: '5' });
     s = r(s, { type: 'qty', qty: 0 });
@@ -79,7 +79,7 @@ describe('lien prix unitaire ↔ total', () => {
     expect(effectiveUnitPrice(s)).toBeNull();
   });
 
-  it('quantité décimale', () => {
+  it('decimal amount', () => {
     let s = initPriceLink(1, null);
     s = r(s, { type: 'qty', qty: 0.5 });
     s = r(s, { type: 'unit', text: '12,90' });

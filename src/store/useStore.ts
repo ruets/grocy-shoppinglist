@@ -56,7 +56,7 @@ interface State {
   lastShoppingLocationId: number | null;
   loading: boolean;
   refreshing: boolean;
-  /** Nombre de mutations en cours (bloque l'auto-refresh). */
+  /** Number of mutations in flight (blocks auto refresh). */
   busy: number;
   loadError: string | null;
   toast: Toast | null;
@@ -75,7 +75,7 @@ interface State {
   purchaseOffList: (productId: number, p: PurchaseInput) => Promise<void>;
   createProduct: (name: string, barcode?: string) => Promise<number>;
   addBarcode: (productId: number, barcode: string) => Promise<void>;
-  /** Enregistre (localement) la DLC d'une ligne ; null = à saisir. */
+  /** Stores a line's best-before date locally; null = still to be entered. */
   setBestBefore: (lineId: number, iso: string | null) => Promise<void>;
   checkout: (shoppingLocationId: number | null, onProgress?: (d: number, t: number) => void) => Promise<CheckoutResult>;
   showToast: (text: string, kind?: Toast['kind']) => void;
@@ -88,7 +88,7 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null;
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export const useStore = create<State>((set, get) => {
-  /** Exécute une mutation en signalant l'activité et en affichant l'erreur éventuelle. */
+  /** Runs a mutation, tracking activity and showing any error. */
   async function mutate<T>(fn: () => Promise<T>): Promise<T> {
     set((s) => ({ busy: s.busy + 1 }));
     try {
@@ -191,7 +191,7 @@ export const useStore = create<State>((set, get) => {
           },
           money: makeMoneyFormatter(currency),
         });
-        // Liste par défaut : la première si rien n'est choisi ou si elle a disparu.
+        // Default list: the first one if none is selected or it no longer exists.
         const { settings } = get();
         if (shoppingLists.length && !shoppingLists.some((l) => l.id === settings.shoppingListId)) {
           const next = { ...settings, shoppingListId: shoppingLists[0].id };
@@ -275,7 +275,7 @@ export const useStore = create<State>((set, get) => {
     unmark: (lineId) =>
       mutate(async () => {
         await requireClient().updateShoppingLine(lineId, { done: false });
-        // On garde le flag stocked (anti double ajout), on oublie prix et DLC.
+        // Keep the stocked flag (prevents double add), forget price and date.
         const prev = get().local[lineId];
         await patchLocal(lineId, prev?.stocked ? { paidUnitPrice: null, bestBefore: null, stocked: true } : null);
         set({ lines: get().lines.map((l) => (l.id === lineId ? { ...l, done: false } : l)) });
@@ -349,7 +349,7 @@ export const useStore = create<State>((set, get) => {
   };
 });
 
-/** Nom de l'unité de stock d'un produit (pluriel si besoin). */
+/** Name of a product's stock unit (plural when needed). */
 export function stockUnitName(meta: Meta | null, productId: number | null, amount: number): string {
   if (!meta || productId === null) return '';
   const p = meta.productsById.get(productId);

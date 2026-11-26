@@ -18,7 +18,7 @@ import { sizes, useColors } from '../theme';
 import { formatInput, parseDecimal, round2 } from '../logic/numbers';
 import { ToastHost } from './ToastHost';
 
-// ---------- Bouton ----------
+// ---------- Button ----------
 
 export function BigButton(props: {
   title: string;
@@ -68,7 +68,7 @@ export function BigButton(props: {
   );
 }
 
-// ---------- Champ texte ----------
+// ---------- Text field ----------
 
 export function Field(props: TextInputProps & { label?: string; hint?: string; ref?: React.Ref<React.ComponentRef<typeof TextInput>> }) {
   const c = useColors();
@@ -98,7 +98,7 @@ export function Field(props: TextInputProps & { label?: string; hint?: string; r
   );
 }
 
-// ---------- Stepper quantité ----------
+// ---------- Quantity stepper ----------
 
 export function Stepper(props: { value: number; onChange: (v: number) => void; step?: number; min?: number; unit?: string }) {
   const c = useColors();
@@ -157,7 +157,7 @@ export function Stepper(props: { value: number; onChange: (v: number) => void; s
   );
 }
 
-// ---------- Puces de choix ----------
+// ---------- Choice chips ----------
 
 export function Chip(props: { label: string; selected?: boolean; onPress: () => void }) {
   const c = useColors();
@@ -182,7 +182,7 @@ export function Chip(props: { label: string; selected?: boolean; onPress: () => 
   );
 }
 
-// ---------- Modale plein écran ----------
+// ---------- Full-screen modal ----------
 
 export function Sheet(props: {
   visible: boolean;
@@ -195,7 +195,7 @@ export function Sheet(props: {
   const c = useColors();
   return (
     <Modal visible={props.visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={props.onClose}>
-      {/* Une Modal est une nouvelle fenêtre native : elle a besoin de son propre provider d'insets. */}
+      {/* A Modal is a new native window: it needs its own safe-area insets provider. */}
       <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top', 'bottom', 'left', 'right']}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

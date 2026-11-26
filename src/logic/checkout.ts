@@ -1,19 +1,19 @@
 import type { GrocyClient, ShoppingLine } from '../api/grocy';
 import { lineLabel } from './grouping';
 
-/** Données saisies en magasin, stockées localement par id de ligne. */
+/** Data entered in store, stored locally per line id. */
 export interface LineLocalData {
-  /** Prix payé par unité de stock. */
+  /** Price paid per stock unit. */
   paidUnitPrice?: number | null;
-  /** DLC AAAA-MM-JJ (null = défaut du produit). */
+  /** Best-before date YYYY-MM-DD (null = product default). */
   bestBefore?: string | null;
-  /** Déjà ajouté au stock (évite un double ajout si la suppression de ligne a échoué). */
+  /** Already added to stock (prevents a double add if deleting the line failed). */
   stocked?: boolean;
 }
 
 export type LocalDataMap = Record<number, LineLocalData>;
 
-/** Lignes produit cochées sans date de péremption (bloquent la validation). */
+/** Checked product lines without a best-before date (they block checkout). */
 export function linesMissingBestBefore(
   lines: ShoppingLine[],
   getLocal: (lineId: number) => LineLocalData | undefined,
@@ -29,15 +29,15 @@ export interface CheckoutResult {
 export interface CheckoutDeps {
   client: GrocyClient;
   getLocal: (lineId: number) => LineLocalData | undefined;
-  /** Persiste un patch des données locales (ex. stocked = true). */
+  /** Persists a patch of the local data (e.g. stocked = true). */
   patchLocal: (lineId: number, patch: LineLocalData) => Promise<void>;
   onProgress?: (done: number, total: number) => void;
 }
 
 /**
- * Valide les achats : pour chaque ligne cochée, ajout au stock (sauf texte libre
- * ou déjà « stocked »), marquage local stocked, puis suppression de la ligne.
- * Les erreurs sont collectées par article.
+ * Checks out purchases: for each checked line, add to stock (unless free text
+ * or already "stocked"), mark it stocked locally, then delete the line.
+ * Errors are collected per item.
  */
 export async function runCheckout(
   lines: ShoppingLine[],

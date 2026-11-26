@@ -1,47 +1,47 @@
-# Dates à la validation + association de codes-barres — plan
+# Best-before dates at checkout + barcode association — plan
 
-> Exécution : native (dans la session), sur demande « vas-y ».
+> Execution: native (in session), on the user's go-ahead.
 
-**Goal:** DLC obligatoire pour valider (saisie guidée + scan), association d'un code inconnu à un produit existant, suppression d'Open Food Facts.
-**Architecture:** logique pure dans `src/logic/` (testée Jest), UI dans les modales existantes ; la saisie des dates devient une phase de `CheckoutModal` (pas de modale supplémentaire, évite les transitions iOS).
+**Goal:** best-before date mandatory to check out (guided entry + scan), associate an unknown barcode with an existing product, remove Open Food Facts.
+**Architecture:** pure logic in `src/logic/` (Jest-tested), UI in the existing modals; date entry becomes a phase of `CheckoutModal` (no extra modal, avoids iOS modal transitions).
 **Spec:** `docs/superpowers/specs/2026-11-26-dates-et-codes-barres-design.md`
 
 ## Global Constraints
-- « Ne périme pas » = `2999-12-31` ; affiché « jamais ».
-- Texte libre exclu de l'obligation de date.
-- Bouton Valider désactivé tant qu'un produit coché n'a pas de date.
+- « Ne périme pas » (never expires) = `2999-12-31`; displayed as « jamais ».
+- Free-text lines are exempt from the date requirement.
+- Checkout button disabled while a checked product has no date.
 
 ## Review Focus
-- `1203` saisi le 26/11 → l'année suivante (date passée) ; `2611` le 26/11 → aujourd'hui (pas l'an prochain).
-- Produit avec `default_best_before_days` = -1 → puce « Ne périme pas » seulement ; 0 → pas de puce défaut.
-- Scan pendant la saisie des dates d'un produit non coché / inconnu → message, pas de changement.
-- Ligne décochée pendant la saisie (refresh) → retirée du parcours sans crash.
-- Associer un code déjà lié à un autre produit → erreur Grocy affichée lisiblement.
+- `1203` typed on 26/11 → next year (date has passed); `2611` on 26/11 → today (not next year).
+- Product with `default_best_before_days` = -1 → « Ne périme pas » chip only; 0 → no default chip.
+- Scanning, during date entry, a product that is not checked / unknown → message, no change.
+- Line unchecked during date entry (refresh) → dropped from the walkthrough without crashing.
+- Associating a barcode already linked to another product → Grocy error shown readably.
 
 ### Task 1: dates (`src/logic/dates.ts`)
-- `parseUserDate` : accepte `JJMM`, `JJMMAA`, `JJMMAAAA` ; sans année → année courante, ou suivante si < aujourd'hui (idem `JJ/MM`).
-- `NEVER_EXPIRES = '2999-12-31'`, `formatBestBefore(iso) → 'jamais' | 'JJ/MM/AAAA'`.
-- `productDefaultBestBefore(days: number|null, today) → string|null` (-1 → NEVER_EXPIRES, >0 → today+days, sinon null).
-- Tests : `misc.test.ts` (Review Focus 1 et 2).
+- `parseUserDate`: accepts `DDMM`, `DDMMYY`, `DDMMYYYY`; without a year → current year, or next year if before today (same for `DD/MM`).
+- `NEVER_EXPIRES = '2999-12-31'`, `formatBestBefore(iso) → 'jamais' | 'DD/MM/YYYY'`.
+- `productDefaultBestBefore(days: number|null, today) → string|null` (-1 → NEVER_EXPIRES, >0 → today+days, otherwise null).
+- Tests: `misc.test.ts` (Review Focus 1 and 2).
 
-### Task 2: logique de validation (`src/logic/checkout.ts`)
-- `linesMissingBestBefore(lines, getLocal) → ShoppingLine[]` : cochées, avec produit, sans `bestBefore`.
-- Tests : `checkout.test.ts`.
+### Task 2: checkout logic (`src/logic/checkout.ts`)
+- `linesMissingBestBefore(lines, getLocal) → ShoppingLine[]`: checked, with a product, without `bestBefore`.
+- Tests: `checkout.test.ts`.
 
-### Task 3: retirer Open Food Facts
-- Supprimer `externalBarcodeLookup`, `isInStoreBarcode`, leurs tests, l'étape OFF de `ListScreen`.
-- `Product.default_best_before_days: number | null` (normalisé).
+### Task 3: remove Open Food Facts
+- Delete `externalBarcodeLookup`, `isInStoreBarcode`, their tests, and the OFF step in `ListScreen`.
+- `Product.default_best_before_days: number | null` (normalized).
 
-### Task 4: écran « Code inconnu » (`src/screens/UnknownBarcodeModal.tsx`, remplace `NewProductModal`)
-- Suggestions : produits des lignes non cochées ; puis `ProductPicker` (recherche + « Créer « x » dans Grocy »).
-- « Associer le code et continuer » → store `addBarcode(productId, code)` → reloadProducts → `openForProduct`.
+### Task 4: « Code inconnu » screen (`src/screens/UnknownBarcodeModal.tsx`, replaces `NewProductModal`)
+- Suggestions: products of unchecked lines; then `ProductPicker` (search + create the product in Grocy).
+- "Associate the barcode and continue" → store `addBarcode(productId, code)` → reloadProducts → `openForProduct`.
 
-### Task 5: validation guidée (`CheckoutModal`)
-- Phases `dates | recap | result`. Ouverture : `dates` si `linesMissingBestBefore` non vide.
-- Phase dates : snapshot des ids manquants, index courant, compteur, champ auto-focus (Entrée = suivant), puces (Ne périme pas, Défaut produit, +3 j, +1 sem., +1 mois), Précédent/Suivant, bouton Scanner (ScannerModal imbriqué) → saute à la ligne cochée du produit, sinon toast.
-- Enregistrement immédiat via store `setBestBefore(lineId, iso|null)`.
-- Recap : date par ligne, bandeau « N dates manquantes » → phase dates ; Valider désactivé si manque.
-- Raccourcis aussi dans `PurchaseModal` (Ne périme pas, Défaut produit).
+### Task 5: guided checkout (`CheckoutModal`)
+- Phases `dates | recap | result`. On open: `dates` if `linesMissingBestBefore` is not empty.
+- Dates phase: snapshot of missing ids, current index, counter, auto-focused field (Return = next), chips (never expires, product default, +3 days, +1 week, +1 month), Previous/Next, Scanner button (nested ScannerModal) → jumps to the product's checked line, otherwise a toast.
+- Saved immediately via store `setBestBefore(lineId, iso|null)`.
+- Recap: date per line, "N missing dates" banner → dates phase; checkout disabled while dates are missing.
+- Shortcuts also in `PurchaseModal` (never expires, product default).
 
-### Task 6: vérification
-- `npx tsc --noEmit`, `npx jest`, `npx expo export --platform ios`, `npm run test:api` contre l’instance Grocy.
+### Task 6: verification
+- `npx tsc --noEmit`, `npx jest`, `npx expo export --platform ios`, `npm run test:api` against the Grocy instance.

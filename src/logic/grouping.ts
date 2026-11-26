@@ -13,9 +13,9 @@ export function lineLabel(l: ShoppingLine): string {
 }
 
 /**
- * Groupe par rayon (groupe de produits) trié alphabétiquement,
- * puis « Sans rayon », puis « Texte libre ». Dans chaque groupe :
- * non cochés d'abord, puis par nom.
+ * Groups by aisle (product group) sorted alphabetically,
+ * then "no aisle", then "free text". Within each group:
+ * unchecked first, then by name.
  */
 export function groupLines(lines: ShoppingLine[]): LineSection[] {
   const groups = new Map<string, ShoppingLine[]>();

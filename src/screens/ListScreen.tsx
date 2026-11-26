@@ -18,7 +18,7 @@ import { ScannerModal } from './ScannerModal';
 import { UnknownBarcodeModal } from './UnknownBarcodeModal';
 
 const AUTO_REFRESH_MS = 20_000;
-/** iOS ne sait pas présenter une modale pendant la fermeture d'une autre. */
+/** iOS cannot present a modal while another one is being dismissed. */
 const waitModalDismiss = () => new Promise((r) => setTimeout(r, Platform.OS === 'ios' ? 500 : 50));
 
 export function ListScreen(props: { onOpenSettings: () => void }) {
@@ -46,7 +46,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
   const anyModalRef = React.useRef(anyModal);
   anyModalRef.current = anyModal;
 
-  // Rafraîchissement auto : app au premier plan, aucune modale, aucune mutation en cours.
+  // Auto refresh: app in foreground, no modal open, no mutation in flight.
   React.useEffect(() => {
     const id = setInterval(() => {
       if (AppState.currentState !== 'active' || anyModalRef.current || useStore.getState().busy > 0) return;
@@ -117,13 +117,13 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
     const code = unknownCode;
     setUnknownCode(null);
     showToast(`Code ${code ?? ''} associé`, 'success');
-    // Dernier prix connu, relu via le code fraîchement associé.
+    // Last known price, read back through the newly associated barcode.
     const client = useStore.getState().client;
     const details = code && client ? await client.getProductByBarcode(code).catch(() => null) : null;
     await openForProduct(productId, details?.last_price ?? null);
   };
 
-  // ---------- Rendu ----------
+  // ---------- Render ----------
 
   let body: React.ReactNode;
   if (loading && !meta) {

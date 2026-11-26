@@ -1,12 +1,12 @@
 /**
- * Test d'intégration du client API contre un Grocy DE TEST.
+ * Integration test of the API client against a TEST Grocy instance.
  *
  *   GROCY_URL=https://grocy-test.lan GROCY_API_KEY=xxx npm run test:api
  *
- * Variables optionnelles : GROCY_SHOPPING_LIST_ID (sinon la première liste).
+ * Optional variables: GROCY_SHOPPING_LIST_ID (defaults to the first list).
  *
- * ⚠️ Crée un produit « ZZ Test courses <horodatage> », un code-barres, éventuellement
- * un magasin « ZZ Magasin test », et ajoute du stock. À n'utiliser que sur une instance de test.
+ * ⚠️ Creates a product "ZZ Test courses <timestamp>", a barcode, possibly
+ * a shopping location "ZZ Magasin test", and adds stock. Only run it against a test instance.
  */
 import { GrocyClient, productPresets, type StockEntry } from '../src/api/grocy';
 import { runCheckout, type LocalDataMap } from '../src/logic/checkout';
@@ -15,7 +15,7 @@ import { addDays, NEVER_EXPIRES } from '../src/logic/dates';
 const URL_ = process.env.GROCY_URL;
 const KEY = process.env.GROCY_API_KEY;
 if (!URL_ || !KEY) {
-  console.error('Définir GROCY_URL et GROCY_API_KEY (instance Grocy de test).');
+  console.error('Set GROCY_URL and GROCY_API_KEY (test Grocy instance).');
   process.exit(2);
 }
 
@@ -44,7 +44,7 @@ async function rawPost(path: string, body: unknown): Promise<any> {
 async function main() {
   const client = new GrocyClient(URL_!, KEY!);
 
-  console.log('1. Connexion et métadonnées');
+  console.log('1. Connection and metadata');
   const info = await client.getSystemInfo();
   console.log(`  Grocy ${info.grocy_version?.Version ?? '?'}`);
   const [lists, products, units, locations, shoppingLocations, userSettings, config] = await Promise.all([
@@ -56,40 +56,40 @@ async function main() {
     client.getUserSettings(),
     client.getSystemConfig(),
   ]);
-  check(lists.length > 0, `${lists.length} liste(s) de courses`);
-  check(Array.isArray(products), `${products.length} produit(s) actif(s)`);
-  console.log(`  Devise : ${String(config.CURRENCY)}`);
+  check(lists.length > 0, `${lists.length} shopping list(s)`);
+  check(Array.isArray(products), `${products.length} active product(s)`);
+  console.log(`  Currency: ${String(config.CURRENCY)}`);
   const listId = process.env.GROCY_SHOPPING_LIST_ID ? Number(process.env.GROCY_SHOPPING_LIST_ID) : lists[0].id;
 
-  console.log('2. Lecture de la liste');
+  console.log('2. Reading the list');
   const before = await client.getShoppingLines(listId);
-  check(Array.isArray(before), `${before.length} ligne(s) dans la liste #${listId}`);
+  check(Array.isArray(before), `${before.length} line(s) in list #${listId}`);
 
-  console.log('3. Création d’un produit de test + code-barres');
+  console.log('3. Creating a test product + barcode');
   const { locationId, quId } = productPresets(userSettings, locations, units);
-  if (locationId === null || quId === null) throw new Error('Aucun emplacement / unité dans Grocy');
+  if (locationId === null || quId === null) throw new Error('No location / quantity unit in Grocy');
   const stamp = Date.now();
   const name = `ZZ Test courses ${stamp}`;
   const productId = await client.createProduct({ name, locationId, quId });
   const barcode = `29${String(stamp).slice(-11)}`;
   await client.addBarcode(productId, barcode);
   const byBarcode = await client.getProductByBarcode(barcode);
-  check(byBarcode?.product.id === productId, 'produit retrouvé par code-barres');
+  check(byBarcode?.product.id === productId, 'product found by barcode');
   const unknown = await client.getProductByBarcode('0000000000017');
-  check(unknown === null, 'code-barres inconnu → null (pas d’erreur)');
+  check(unknown === null, 'unknown barcode → null (no error)');
 
   let shopId = shoppingLocations[0]?.id ?? null;
   if (shopId === null) {
     shopId = Number((await rawPost('/objects/shopping_locations', { name: 'ZZ Magasin test' })).created_object_id);
   }
 
-  console.log('4. Ajout à la liste');
+  console.log('4. Adding to the list');
   const lineId = await client.addShoppingLine({
     shopping_list_id: listId,
     product_id: productId,
     amount: 2,
     qu_id: quId,
-    note: 'test intégration',
+    note: 'integration test',
     done: false,
   });
   const freeId = await client.addShoppingLine({
@@ -102,10 +102,10 @@ async function main() {
   });
   let lines = await client.getShoppingLines(listId);
   const added = lines.find((l) => l.id === lineId);
-  check(added && added.amount === 2 && !added.done && added.product_name === name, 'ligne produit présente (2, non cochée)');
-  check(lines.some((l) => l.id === freeId && l.product_id === null), 'ligne texte libre présente');
+  check(added && added.amount === 2 && !added.done && added.product_name === name, 'product line present (2, unchecked)');
+  check(lines.some((l) => l.id === freeId && l.product_id === null), 'free-text line present');
 
-  console.log('5. Cochage avec prix');
+  console.log('5. Checking off with a price');
   const price = 1.2345;
   const bestBefore = addDays(10);
   await client.updateShoppingLine(lineId, { done: true, amount: 3 });
@@ -113,11 +113,11 @@ async function main() {
   const local: LocalDataMap = { [lineId]: { paidUnitPrice: price, bestBefore } };
   lines = await client.getShoppingLines(listId);
   const checkedLine = lines.find((l) => l.id === lineId);
-  check(checkedLine?.done && checkedLine.amount === 3, 'ligne cochée, quantité 3');
+  check(checkedLine?.done && checkedLine.amount === 3, 'line checked, amount 3');
 
-  console.log('6. Validation des achats');
+  console.log('6. Checkout');
   const entriesBefore = await client.getStockEntries(productId);
-  const ours = lines.filter((l) => l.id === lineId || l.id === freeId); // ne touche pas aux autres lignes cochées
+  const ours = lines.filter((l) => l.id === lineId || l.id === freeId); // leave other checked lines alone
   const result = await runCheckout(ours, shopId, {
     client,
     getLocal: (id) => local[id],
@@ -125,43 +125,43 @@ async function main() {
       local[id] = { ...local[id], ...p };
     },
   });
-  check(result.errors.length === 0, `validation sans erreur ${result.errors.map((e) => e.message).join(' | ')}`);
-  check(local[lineId]?.stocked === true, 'flag stocked posé');
+  check(result.errors.length === 0, `checkout without errors ${result.errors.map((e) => e.message).join(' | ')}`);
+  check(local[lineId]?.stocked === true, 'stocked flag set');
 
   const entriesAfter = await client.getStockEntries(productId);
   const newEntries: StockEntry[] = entriesAfter.filter((e) => !entriesBefore.some((b) => b.id === e.id));
   const qty = newEntries.reduce((s, e) => s + e.amount, 0);
-  check(close(qty, 3), `stock ajouté : ${qty} (attendu 3)`);
-  check(newEntries.length > 0 && newEntries.every((e) => close(e.price, price)), `prix ${newEntries.map((e) => e.price)} (attendu ${price})`);
-  check(newEntries.length > 0 && newEntries.every((e) => e.best_before_date === bestBefore), `DLC ${newEntries.map((e) => e.best_before_date)} (attendu ${bestBefore})`);
-  check(newEntries.length > 0 && newEntries.every((e) => e.shopping_location_id === shopId), `magasin ${newEntries.map((e) => e.shopping_location_id)} (attendu ${shopId})`);
+  check(close(qty, 3), `stock added: ${qty} (expected 3)`);
+  check(newEntries.length > 0 && newEntries.every((e) => close(e.price, price)), `price ${newEntries.map((e) => e.price)} (expected ${price})`);
+  check(newEntries.length > 0 && newEntries.every((e) => e.best_before_date === bestBefore), `best-before ${newEntries.map((e) => e.best_before_date)} (expected ${bestBefore})`);
+  check(newEntries.length > 0 && newEntries.every((e) => e.shopping_location_id === shopId), `shopping location ${newEntries.map((e) => e.shopping_location_id)} (expected ${shopId})`);
 
   lines = await client.getShoppingLines(listId);
-  check(!lines.some((l) => l.id === lineId), 'ligne produit supprimée de la liste');
-  check(!lines.some((l) => l.id === freeId), 'ligne texte libre supprimée de la liste');
+  check(!lines.some((l) => l.id === lineId), 'product line removed from the list');
+  check(!lines.some((l) => l.id === freeId), 'free-text line removed from the list');
 
-  console.log('7. Revalidation idempotente (stocked)');
+  console.log('7. Idempotent re-checkout (stocked)');
   const again = await runCheckout([{ ...checkedLine!, done: true }], shopId, {
     client,
     getLocal: (id) => local[id],
     patchLocal: async () => {},
   });
   const entriesFinal = await client.getStockEntries(productId);
-  check(entriesFinal.length === entriesAfter.length, 'pas de double ajout au stock');
-  check(again.errors.length === 1, 'suppression d’une ligne déjà supprimée → erreur remontée par article');
+  check(entriesFinal.length === entriesAfter.length, 'no double stock entry');
+  check(again.errors.length === 1, 'deleting an already deleted line → per-item error reported');
 
-  console.log('8. « Ne périme pas » (2999-12-31)');
+  console.log('8. Never expires (2999-12-31)');
   const beforeNever = await client.getStockEntries(productId);
   await client.purchase(productId, { amount: 1, bestBeforeDate: NEVER_EXPIRES, shoppingLocationId: shopId });
   const neverEntries = (await client.getStockEntries(productId)).filter((e) => !beforeNever.some((b) => b.id === e.id));
-  check(neverEntries.length === 1 && neverEntries[0].best_before_date === NEVER_EXPIRES, `DLC ${neverEntries.map((e) => e.best_before_date)} (attendu ${NEVER_EXPIRES})`);
+  check(neverEntries.length === 1 && neverEntries[0].best_before_date === NEVER_EXPIRES, `best-before ${neverEntries.map((e) => e.best_before_date)} (expected ${NEVER_EXPIRES})`);
 
-  console.log(failures ? `\n✗ ${failures} vérification(s) en échec` : '\n✓ Tout est OK');
-  console.log(`(Produit de test laissé dans Grocy : « ${name} », id ${productId})`);
+  console.log(failures ? `\n✗ ${failures} check(s) failed` : '\n✓ All good');
+  console.log(`(Test product left in Grocy: "${name}", id ${productId})`);
   process.exit(failures ? 1 : 0);
 }
 
 main().catch((e) => {
-  console.error('Erreur :', e?.message ?? e);
+  console.error('Error:', e?.message ?? e);
   process.exit(1);
 });

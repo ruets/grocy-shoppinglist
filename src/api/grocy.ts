@@ -1,7 +1,7 @@
 /**
- * Client typé pour l'API Grocy 4.7.x.
- * Volontairement sans dépendance React Native : utilisable depuis l'app
- * comme depuis le script d'intégration Node (scripts/api-integration-test.ts).
+ * Typed client for the Grocy 4.7.x API.
+ * Deliberately free of React Native dependencies: usable from the app
+ * as well as from the Node integration script (scripts/api-integration-test.ts).
  */
 
 export interface ShoppingList {
@@ -17,7 +17,7 @@ export interface Product {
   qu_id_purchase: number;
   product_group_id: number | null;
   location_id: number | null;
-  /** Durée de conservation par défaut (jours) ; -1 = ne périme pas. */
+  /** Default shelf life in days; -1 = never expires. */
   default_best_before_days: number | null;
 }
 
@@ -43,18 +43,18 @@ export interface SystemInfo {
   [key: string]: unknown;
 }
 
-/** Ligne de liste de courses normalisée (vue uihelper_shopping_list). */
+/** Normalized shopping list line (uihelper_shopping_list view). */
 export interface ShoppingLine {
   id: number;
   shopping_list_id: number;
   product_id: number | null;
   note: string;
-  /** Quantité, en unité de stock du produit. */
+  /** Amount, in the product's stock unit. */
   amount: number;
   done: boolean;
   qu_id: number | null;
   product_name: string | null;
-  /** Dernier prix d'achat par unité de stock (null si inconnu). */
+  /** Last purchase price per stock unit (null if unknown). */
   last_price: number | null;
   product_group_name: string | null;
 }
@@ -85,9 +85,9 @@ export interface NewShoppingLine {
 
 export interface PurchaseParams {
   amount: number;
-  /** Prix par unité de stock. Omis si null/undefined. */
+  /** Price per stock unit. Omitted when null/undefined. */
   price?: number | null;
-  /** YYYY-MM-DD ; omis => date par défaut du produit. */
+  /** YYYY-MM-DD; omitted => product default date. */
   bestBeforeDate?: string | null;
   shoppingLocationId?: number | null;
 }
@@ -105,7 +105,7 @@ export class GrocyError extends Error {
 
 type FetchLike = typeof fetch;
 
-// ---------- normalisation (Grocy/SQLite renvoie parfois des nombres en chaînes) ----------
+// ---------- normalization (Grocy/SQLite sometimes returns numbers as strings) ----------
 
 export function toNum(v: unknown): number | null {
   if (v === null || v === undefined || v === '') return null;
@@ -170,7 +170,7 @@ export class GrocyClient {
     this.base = `${normalizeBaseUrl(baseUrl)}/api`;
   }
 
-  // ---------- bas niveau ----------
+  // ---------- low level ----------
 
   private async request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
@@ -227,7 +227,7 @@ export class GrocyClient {
     return data as T;
   }
 
-  // ---------- système ----------
+  // ---------- system ----------
 
   getSystemInfo(): Promise<SystemInfo> {
     return this.request('GET', '/system/info');
@@ -241,7 +241,7 @@ export class GrocyClient {
     return this.request('GET', '/user/settings');
   }
 
-  // ---------- objets génériques ----------
+  // ---------- generic objects ----------
 
   async getShoppingLists(): Promise<ShoppingList[]> {
     const rows = await this.request<any[]>('GET', '/objects/shopping_lists');
@@ -277,10 +277,10 @@ export class GrocyClient {
     return this.getNamed('product_groups');
   }
 
-  // ---------- liste de courses ----------
+  // ---------- shopping list ----------
 
   async getShoppingLines(shoppingListId: number): Promise<ShoppingLine[]> {
-    // query[]=shopping_list_id=<id>, encodé
+    // query[]=shopping_list_id=<id>, URL-encoded
     const q = `query%5B%5D=shopping_list_id%3D${encodeURIComponent(String(shoppingListId))}`;
     const rows = await this.request<any[]>('GET', `/objects/uihelper_shopping_list?${q}`);
     return rows.map(normLine);
@@ -311,9 +311,9 @@ export class GrocyClient {
     return this.request('DELETE', `/objects/shopping_list/${id}`);
   }
 
-  // ---------- produits / codes-barres ----------
+  // ---------- products / barcodes ----------
 
-  /** Renvoie null si le code-barres est inconnu de Grocy (HTTP 400). */
+  /** Returns null when Grocy does not know the barcode (HTTP 400). */
   async getProductByBarcode(barcode: string): Promise<BarcodeProductDetails | null> {
     try {
       const res = await this.request<any>('GET', `/stock/products/by-barcode/${encodeURIComponent(barcode)}`);
@@ -377,7 +377,7 @@ export class GrocyClient {
   }
 }
 
-/** Choix de l'emplacement / unité par défaut pour créer un produit. */
+/** Default location / quantity unit used to create a product. */
 export function productPresets(
   settings: UserSettings,
   locations: NamedEntity[],

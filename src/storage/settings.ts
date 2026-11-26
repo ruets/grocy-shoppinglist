@@ -17,8 +17,8 @@ export async function loadSettings(): Promise<AppSettings> {
     SecureStore.getItemAsync(K_LIST),
   ]);
   const listId = list ? Number(list) : NaN;
-  // Développement uniquement : préremplissage depuis l'environnement si rien n'est enregistré
-  // (ex. simulateur sans copier-coller). Ne jamais définir ces variables pour un build distribué.
+  // Development only: prefill from the environment when nothing is saved
+  // (e.g. simulator without copy-paste). Never set these variables for a distributed build.
   const devUrl = __DEV__ ? process.env.EXPO_PUBLIC_GROCY_URL : undefined;
   const devKey = __DEV__ ? process.env.EXPO_PUBLIC_GROCY_API_KEY : undefined;
   return {

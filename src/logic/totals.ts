@@ -1,25 +1,25 @@
 import { round2 } from './numbers';
 
-/** Données minimales d'une ligne pour le calcul des totaux. */
+/** Minimal line data needed to compute totals. */
 export interface TotalsLine {
-  /** Quantité en unité de stock. */
+  /** Amount in stock unit. */
   amount: number;
   done: boolean;
-  /** Ligne « texte libre » (sans produit). */
+  /** Free-text line (no product). */
   freeText: boolean;
-  /** Dernier prix connu par unité de stock. */
+  /** Last known price per stock unit. */
   lastPrice: number | null;
-  /** Prix unitaire saisi en magasin (local), si présent. */
+  /** Unit price entered in store (local), if any. */
   paidUnitPrice: number | null;
 }
 
 export interface TotalsBucket {
   total: number;
-  /** Au moins une partie du total vient d'une estimation (dernier prix). */
+  /** At least part of the total is an estimate (last price). */
   estimated: boolean;
-  /** Nombre d'articles sans aucun prix (ni saisi ni connu). */
+  /** Number of items with no price at all (neither entered nor known). */
   withoutPrice: number;
-  /** Nombre d'articles dans la catégorie. */
+  /** Number of items in the bucket. */
   count: number;
 }
 
@@ -31,7 +31,7 @@ export interface Totals {
 
 const empty = (): TotalsBucket => ({ total: 0, estimated: false, withoutPrice: 0, count: 0 });
 
-/** Prix de ligne et nature (réel / estimé / absent). */
+/** Line price and its kind (actual / estimated / missing). */
 export function linePrice(line: TotalsLine): { value: number | null; estimated: boolean } {
   if (line.done && line.paidUnitPrice !== null && Number.isFinite(line.paidUnitPrice)) {
     return { value: line.paidUnitPrice * line.amount, estimated: false };
@@ -54,9 +54,9 @@ function addTo(bucket: TotalsBucket, line: TotalsLine) {
 }
 
 /**
- * Panier = lignes cochées (prix saisi, sinon estimation au dernier prix).
- * Reste = lignes non cochées au dernier prix (toujours une estimation).
- * Liste = Panier + Reste.
+ * Cart = checked lines (entered price, otherwise last-price estimate).
+ * Remaining = unchecked lines at last price (always an estimate).
+ * List = Cart + Remaining.
  */
 export function computeTotals(lines: TotalsLine[]): Totals {
   const cart = empty();
@@ -75,9 +75,9 @@ export function computeTotals(lines: TotalsLine[]): Totals {
   return { cart, remaining, list };
 }
 
-/** Préfixe « ~ » pour les estimations. */
+/** "~" prefix for estimates. */
 export function formatBucket(b: TotalsBucket, fmt: (n: number) => string): string {
-  // Aucun article de la catégorie n'a de prix : un « 0,00 » serait trompeur.
+  // No item in the bucket has a price: "0,00" would be misleading.
   if (b.count > 0 && b.withoutPrice === b.count) return '—';
   return `${b.estimated ? '~' : ''}${fmt(b.total)}`;
 }

@@ -7,13 +7,13 @@ import { sizes, useColors } from '../theme';
 import { BigButton, Field } from './ui';
 
 /**
- * Recherche de produit Grocy (insensible aux accents) avec option
- * « Créer le produit dans Grocy ».
+ * Accent-insensitive Grocy product search with a
+ * "create the product in Grocy" option.
  */
 export function ProductPicker(props: {
   productId: number | null;
   onChange: (id: number | null) => void;
-  /** Afficher l'aide « texte libre » (éditeur d'article). */
+  /** Show the free-text hint (item editor). */
   allowFreeText?: boolean;
 }) {
   const c = useColors();
@@ -58,7 +58,7 @@ export function ProductPicker(props: {
       setQuery('');
       props.onChange(id);
     } catch {
-      // toast déjà affiché
+      // toast already shown
     } finally {
       setCreating(false);
     }

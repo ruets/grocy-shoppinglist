@@ -38,7 +38,7 @@ export function useColors(): Colors {
   return useColorScheme() === 'dark' ? dark : light;
 }
 
-/** Tailles « une main en magasin ». */
+/** Sizes for one-handed use in store. */
 export const sizes = {
   touch: 56,
   radius: 14,

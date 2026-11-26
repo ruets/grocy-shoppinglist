@@ -12,7 +12,7 @@ export type PurchaseTarget =
   | { kind: 'line'; line: ShoppingLine; amount: number }
   | { kind: 'offList'; productId: number; amount: number; lastPrice: number | null };
 
-/** Mise au panier : quantité, prix unitaire ↔ total, DLC optionnelle. */
+/** Add to cart: amount, unit price ↔ total, optional best-before date. */
 export function PurchaseModal(props: { target: PurchaseTarget | null; onClose: () => void }) {
   const c = useColors();
   const meta = useStore((s) => s.meta);
@@ -30,7 +30,7 @@ export function PurchaseModal(props: { target: PurchaseTarget | null; onClose: (
   const [dateText, setDateText] = React.useState('');
   const [saving, setSaving] = React.useState(false);
 
-  // (Ré)initialisation à l'ouverture
+  // (Re)initialize on open
   React.useEffect(() => {
     if (!t) return;
     let unit: number | null = null;

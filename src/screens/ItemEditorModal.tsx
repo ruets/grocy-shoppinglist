@@ -6,7 +6,7 @@ import { BigButton, Field, SectionLabel, Sheet, Stepper } from '../components/ui
 import { stockUnitName, useStore } from '../store/useStore';
 import { useColors } from '../theme';
 
-/** Ajout (line = null) ou modification d'un article. */
+/** Add (line = null) or edit an item. */
 export function ItemEditorModal(props: { visible: boolean; line: ShoppingLine | null; onClose: () => void }) {
   const c = useColors();
   const meta = useStore((s) => s.meta);
@@ -36,7 +36,7 @@ export function ItemEditorModal(props: { visible: boolean; line: ShoppingLine | 
       else await addItem(payload);
       props.onClose();
     } catch {
-      // toast affiché par le store
+      // toast shown by the store
     } finally {
       setSaving(false);
     }

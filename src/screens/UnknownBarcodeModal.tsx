@@ -6,13 +6,13 @@ import { useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
 
 /**
- * Code-barres inconnu de Grocy : l'associer à un produit existant
- * (en priorité ceux de la liste non cochés) ou créer un nouveau produit.
+ * Barcode unknown to Grocy: associate it with an existing product
+ * (unchecked list items first) or create a new product.
  */
 export function UnknownBarcodeModal(props: {
   barcode: string | null;
   onClose: () => void;
-  /** Code associé au produit : on enchaîne sur la modale d'achat. */
+  /** Barcode associated with the product: continue with the purchase modal. */
   onAssociated: (productId: number) => void;
 }) {
   const c = useColors();
@@ -24,7 +24,7 @@ export function UnknownBarcodeModal(props: {
 
   React.useEffect(() => setProductId(null), [props.barcode]);
 
-  // Produits des lignes non cochées, sans doublon, triés par nom.
+  // Products of unchecked lines, deduplicated, sorted by name.
   const suggestions = React.useMemo(() => {
     const seen = new Map<number, string>();
     for (const l of lines) {
@@ -43,7 +43,7 @@ export function UnknownBarcodeModal(props: {
       await reloadProducts();
       props.onAssociated(productId);
     } catch {
-      /* toast affiché par le store */
+      /* toast shown by the store */
     } finally {
       setSaving(false);
     }

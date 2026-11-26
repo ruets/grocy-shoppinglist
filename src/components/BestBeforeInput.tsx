@@ -4,7 +4,7 @@ import { addDays, formatBestBefore, NEVER_EXPIRES, parseUserDate, productDefault
 import { useStore } from '../store/useStore';
 import { Chip, Field } from './ui';
 
-/** Texte saisi → ISO (ou « jamais »). null si vide, 'invalid' si illisible. */
+/** Typed text → ISO date (or « jamais »). null if empty, 'invalid' if unreadable. */
 export function parseBestBeforeText(text: string): string | null | 'invalid' {
   const t = text.trim();
   if (!t) return null;
@@ -12,13 +12,13 @@ export function parseBestBeforeText(text: string): string | null | 'invalid' {
   return parseUserDate(t) ?? 'invalid';
 }
 
-/** Valeur ISO → texte du champ. */
+/** ISO value → field text. */
 export function bestBeforeToText(iso: string | null | undefined): string {
   return formatBestBefore(iso);
 }
 
 /**
- * Champ DLC + raccourcis. Saisie rapide : « 1203 » = 12/03, « 120327 » = 12/03/2027.
+ * Best-before date field + shortcuts. Quick entry: "1203" = 12/03, "120327" = 12/03/2027.
  */
 export function BestBeforeInput(props: {
   productId: number | null;
@@ -28,7 +28,7 @@ export function BestBeforeInput(props: {
   placeholder?: string;
   autoFocus?: boolean;
   onSubmit?: () => void;
-  /** Afficher la puce « Plus tard » (= laisser vide). */
+  /** Show the « Plus tard » (later) chip, i.e. leave empty. */
   allowEmpty?: boolean;
 }) {
   const meta = useStore((s) => s.meta);

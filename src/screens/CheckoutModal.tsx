@@ -30,7 +30,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
   const [progress, setProgress] = React.useState<[number, number] | null>(null);
   const [result, setResult] = React.useState<CheckoutResult | null>(null);
 
-  // Parcours des dates : ids des lignes à traiter + position courante.
+  // Date walkthrough: ids of the lines to process + current position.
   const [queue, setQueue] = React.useState<number[]>([]);
   const [index, setIndex] = React.useState(0);
   const [dateText, setDateText] = React.useState('');
@@ -63,12 +63,12 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.visible]);
 
-  // Lignes encore valides du parcours (une ligne décochée/supprimée entre-temps en sort).
+  // Lines still valid in the walkthrough (a line unchecked/deleted meanwhile drops out).
   const activeQueue = queue.filter((id) => lines.some((l) => l.id === id && l.done && l.product_id !== null));
   const pos = Math.min(index, Math.max(activeQueue.length - 1, 0));
   const current = phase === 'dates' ? lines.find((l) => l.id === activeQueue[pos]) : undefined;
 
-  // Charge la date déjà saisie quand on change d'article.
+  // Load the already entered date when switching items.
   React.useEffect(() => {
     if (current) setDateText(bestBeforeToText(local[current.id]?.bestBefore));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,7 +140,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
     }
   };
 
-  // ---------- Résultat ----------
+  // ---------- Result ----------
   if (phase === 'result' && result) {
     return (
       <Sheet
@@ -168,10 +168,10 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
     );
   }
 
-  // ---------- Saisie guidée des dates ----------
+  // ---------- Guided date entry ----------
   if (phase === 'dates') {
     if (!current) {
-      // Plus rien à saisir (lignes décochées entre-temps…)
+      // Nothing left to enter (lines unchecked meanwhile…)
       return (
         <Sheet
           visible={props.visible}
@@ -234,7 +234,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
     );
   }
 
-  // ---------- Récapitulatif ----------
+  // ---------- Summary ----------
   return (
     <Sheet
       visible={props.visible}

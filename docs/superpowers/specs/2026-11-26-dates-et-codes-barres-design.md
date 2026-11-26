@@ -1,43 +1,43 @@
-# Dates de péremption à la validation + association de codes-barres
+# Best-before dates at checkout + barcode association
 
-## Pourquoi
-- En magasin, saisir la DLC à chaque article est pénible : elle doit rester **facultative pendant les courses**, modifiable à tout moment, mais **obligatoire pour valider** la liste (chaque produit coché doit avoir une date).
-- Le lookup Open Food Facts crée des produits faux (codes magasin en 2…) → **supprimé**.
-- Un code inconnu correspond souvent à un produit **déjà présent** dans Grocy (ou sur la liste) : il faut pouvoir **associer le code** à ce produit, pas seulement en créer un nouveau.
+## Why
+- Entering the best-before date for every item while shopping is tedious: it must stay **optional while shopping**, editable at any time, but **mandatory to check out** the list (every checked product needs a date).
+- The Open Food Facts lookup creates wrong products (in-store codes starting with 2) → **removed**.
+- An unknown barcode often belongs to a product that **already exists** in Grocy (or is on the list): it must be possible to **associate the barcode** with that product, not only to create a new one.
 
-## Objectifs / non-objectifs
-- Objectif : valider la liste sans aucun produit coché sans date ; saisie rapide d'une main.
-- Objectif : code inconnu → associer à un produit existant ou créer.
-- Non-objectif : modifier les entrées de stock *après* validation (les dates sont saisies avant).
-- Anti-objectif : bloquer le cochage en magasin pour une date.
+## Goals / non-goals
+- Goal: never check out a checked product without a date; fast one-handed entry.
+- Goal: unknown barcode → associate it with an existing product or create one.
+- Non-goal: editing stock entries *after* checkout (dates are entered before).
+- Anti-goal: blocking checking items off in store because of a date.
 
-## Approches envisagées
-- A. Champ date sur chaque ligne du récap — simple, mais clavier qui s'ouvre/ferme, longue liste.
-- B. **Enchaînement guidé** des produits sans date, un par un.
-- C. Scanner le produit pour ouvrir sa date.
-- **Retenu : B + C fusionnés** — l'enchaînement guidé propose les produits sans date dans l'ordre, et un bouton « Scanner » permet de sauter directement au produit qu'on a en main.
+## Approaches considered
+- A. Date field on every line of the checkout summary — simple, but the keyboard keeps opening/closing and the list gets long.
+- B. **Guided walkthrough** of the products missing a date, one at a time.
+- C. Scan the product to open its date.
+- **Chosen: B + C combined** — the guided walkthrough proposes the products without a date in order, and a « Scanner » button jumps straight to the product in hand.
 
 ## Design
 ### Dates
-- Modale d'achat : inchangée (date facultative), + nouveaux raccourcis ci-dessous.
-- « Valider (n) » : s'il manque des dates sur des **produits** cochés (texte libre exclu), on ouvre d'abord l'écran **« Dates de péremption »** :
-  - compteur « 2 / 5 », nom du produit en gros, quantité ;
-  - champ date auto-focus, clavier numérique, Entrée = Suivant ;
-  - puces : **« Ne périme pas »** (= `2999-12-31`, convention Grocy), **« Défaut du produit (+N j) »** si le produit a `default_best_before_days > 0` (remplit la date calculée, donc explicite), +3 j, +1 sem., +1 mois ;
-  - « Précédent » / « Suivant » ; bouton **« Scanner »** : le code scanné saute au produit coché correspondant (sans toucher à la quantité) ; code d'un produit non coché/inconnu → message ;
-  - à la fin → récap de validation.
-- Récap : chaque ligne affiche sa date (« jamais » pour 2999-12-31) ; s'il en manque, bandeau « N dates manquantes » qui relance l'enchaînement ; bouton Valider désactivé tant qu'il en manque.
-- Saisie rapide : `1203` → 12/03 (année courante, ou suivante si la date est passée), `120327` → 12/03/2027, plus les formats actuels.
-- Les dates sont enregistrées localement (comme aujourd'hui) au fil de l'eau : quitter l'écran ne perd rien.
+- Purchase modal: unchanged (date optional), plus the new shortcuts below.
+- « Valider (n) »: if checked **products** are missing a date (free text excluded), first open the **« Dates de péremption »** screen:
+  - "2 / 5" counter, product name in large type, amount;
+  - auto-focused date field, numeric keyboard, Return = next;
+  - chips: **« Ne périme pas »** (never expires = `2999-12-31`, Grocy convention), **« Défaut produit (+N j) »** (product default) when the product has `default_best_before_days > 0` (fills in the computed date, so it is explicit), +3 days, +1 week, +1 month;
+  - Previous / Next; **« Scanner »** button: the scanned code jumps to the matching checked line (amount unchanged); a product that is not checked / unknown → message;
+  - at the end → checkout summary.
+- Summary: each line shows its date (« jamais » for 2999-12-31); if some are missing, an "N missing dates" banner restarts the walkthrough; the checkout button is disabled while dates are missing.
+- Quick entry: `1203` → 12/03 (current year, or next year if the date has passed), `120327` → 12/03/2027, plus the existing formats.
+- Dates are saved locally (as before) as they are typed: leaving the screen loses nothing.
 
-### Codes-barres
-- Suppression du lookup Open Food Facts (client, écran, tests) et de la règle « codes en 2… ».
-- Code inconnu → écran **« Code inconnu »** :
-  - en haut, les produits des lignes **non cochées** de la liste (les plus probables) ;
-  - recherche de produit Grocy (même recherche sans accents) ;
-  - choisir un produit → « Associer le code à ce produit » (`POST /objects/product_barcodes`) → enchaîne sur la modale d'achat (règles de scan habituelles) ;
-  - « Créer un nouveau produit » → formulaire nom actuel → création + code → modale d'achat.
+### Barcodes
+- Remove the Open Food Facts lookup (client, screen, tests) and the "codes starting with 2" rule.
+- Unknown barcode → **« Code inconnu »** screen:
+  - at the top, products of **unchecked** list lines (most likely matches);
+  - Grocy product search (same accent-insensitive search);
+  - pick a product → "associate the barcode with this product" (`POST /objects/product_barcodes`) → continue with the purchase modal (usual scan rules);
+  - "create a new product" → name form → product + barcode creation → purchase modal.
 
-## Laissé au constructeur
-- Disposition exacte des écrans, libellés secondaires.
-- Si « Défaut du produit » vaut 0 j ou -1 (« jamais »), ne pas afficher la puce (ou l'assimiler à « Ne périme pas » pour -1).
+## Left to the builder
+- Exact screen layout, secondary labels.
+- If the product default is 0 days or -1 ("never"), hide the chip (or treat -1 as « Ne périme pas »).

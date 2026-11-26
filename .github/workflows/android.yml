@@ -1,8 +1,8 @@
 name: Android
 
-# - push / PR : vérifications rapides (tsc + Jest)
-# - tag vX.Y.Z : build de l'APK release + Release GitHub avec l'APK
-# - lancement manuel : build de l'APK en artefact, sans release
+# - push / PR: quick checks (tsc + Jest)
+# - vX.Y.Z tag: release APK build + GitHub Release with the APK
+# - manual run: APK build as a workflow artifact, no release
 on:
   push:
     branches: [main]
@@ -35,9 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write # création de la release
+      contents: write # needed to create the release
     env:
-      # arm64-v8a couvre les téléphones Android actuels ; ajouter x86_64 pour un émulateur.
+      # arm64-v8a covers current Android phones; add x86_64 for an emulator.
       ARCHS: arm64-v8a
     steps:
       - uses: actions/checkout@v4
@@ -56,8 +56,8 @@ jobs:
 
       - run: npm ci
 
-      # Tag v1.2.3 → version 1.2.3 ; versionCode = numéro de run (toujours croissant).
-      - name: Version depuis le tag
+      # Tag v1.2.3 → version 1.2.3; versionCode = run number (always increasing).
+      - name: Version from tag
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -70,15 +70,15 @@ jobs:
           ' "$VERSION" "$GITHUB_RUN_NUMBER"
           echo "Version $VERSION (versionCode $GITHUB_RUN_NUMBER)"
 
-      # Génère android/ depuis app.json (Continuous Native Generation, dossier non versionné).
+      # Generates android/ from app.json (Continuous Native Generation, folder not versioned).
       - run: npx expo prebuild --platform android --no-install --clean
 
-      # Release signée avec la clé de debug du template Expo : APK installable, pas pour le Play Store.
+      # Release signed with the Expo template debug key: installable APK, not for the Play Store.
       - name: Gradle assembleRelease
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=$ARCHS
 
-      - name: Nommer l'APK
+      - name: Name the APK
         run: |
           NAME="courses-grocy-${GITHUB_REF_NAME//\//-}.apk"
           cp android/app/build/outputs/apk/release/app-release.apk "$NAME"

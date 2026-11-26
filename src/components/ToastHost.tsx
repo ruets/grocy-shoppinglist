@@ -3,7 +3,7 @@ import { Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../store/useStore';
 
-/** Toast global (au-dessus de tout sauf des modales natives). */
+/** Global toast (above everything except native modals). */
 export function ToastHost() {
   const toast = useStore((s) => s.toast);
   const hide = useStore((s) => s.hideToast);

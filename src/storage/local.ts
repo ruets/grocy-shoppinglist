@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { LineLocalData } from '../logic/checkout';
 
 export interface StoredLineData extends LineLocalData {
-  /** Horodatage de dernière modification (ms), pour le nettoyage. */
+  /** Last-modified timestamp (ms), used for cleanup. */
   updatedAt: number;
 }
 
@@ -25,8 +25,8 @@ export async function saveLineData(map: StoredLineMap): Promise<void> {
 }
 
 /**
- * Supprime les entrées des lignes disparues. Les entrées très récentes sont
- * conservées pour éviter une course avec un rafraîchissement en vol.
+ * Drops entries for lines that no longer exist. Very recent entries are
+ * kept to avoid racing with an in-flight refresh.
  */
 export function pruneLineData(map: StoredLineMap, existingIds: Set<number>, now = Date.now()): StoredLineMap {
   const out: StoredLineMap = {};

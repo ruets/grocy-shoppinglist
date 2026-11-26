@@ -13,7 +13,7 @@ function fakeFetch(responses: Array<{ status: number; body?: unknown }>) {
 }
 
 describe('GrocyClient', () => {
-  it('envoie la clé API et encode la requête de liste ; normalise les champs', async () => {
+  it('sends the API key, encodes the list query and normalizes fields', async () => {
     const f = fakeFetch([
       {
         status: 200,
@@ -47,7 +47,7 @@ describe('GrocyClient', () => {
     await expect(c.deleteShoppingLine(1)).rejects.toThrow('Oups');
   });
 
-  it('401 → message clé API', async () => {
+  it('401 → API key message', async () => {
     const f = fakeFetch([{ status: 401, body: { error_message: 'x' } }]);
     const c = new GrocyClient('http://g', 'k', f.impl);
     await expect(c.getSystemInfo()).rejects.toMatchObject({ kind: 'auth' });
@@ -65,7 +65,7 @@ describe('GrocyClient', () => {
     expect(JSON.parse(String(f.calls[1].init.body))).toEqual({ amount: 1, transaction_type: 'purchase' });
   });
 
-  it('code-barres déjà utilisé → message lisible', async () => {
+  it('barcode already in use → readable message', async () => {
     const f = fakeFetch([
       {
         status: 400,
@@ -78,7 +78,7 @@ describe('GrocyClient', () => {
     );
   });
 
-  it('erreur réseau → GrocyError network', async () => {
+  it('network error → GrocyError network', async () => {
     const impl = jest.fn(async () => {
       throw new TypeError('Network request failed');
     }) as unknown as typeof fetch;
