@@ -63,6 +63,22 @@ GROCY_URL=http://localhost:9283 GROCY_API_KEY=xxx npm run test:api
 
 Optionnel : `GROCY_SHOPPING_LIST_ID`. Le script lit la liste, ajoute une ligne produit + une ligne texte libre, les coche avec prix, valide, puis vérifie l'entrée de stock (quantité, prix, DLC, magasin), la disparition des lignes et l'absence de double ajout.
 
+## CI Android (GitHub Actions)
+
+`.github/workflows/android.yml`, à chaque push sur `main`, sur les PR ou à la main (*Run workflow*) :
+
+1. **checks** : `npm ci`, `tsc --noEmit`, Jest ;
+2. **build-apk** : `expo prebuild --platform android` (génère `android/`, non versionné), puis `./gradlew assembleRelease` (JDK 17, arm64-v8a). L'APK est publié en artefact (*Actions → run → Artifacts*, conservé 14 jours).
+
+L'APK est signé avec la clé de debug du template Expo : installable directement sur un téléphone (« sources inconnues »), mais pas publiable sur le Play Store. Pour un émulateur x86, mettre `ARCHS: arm64-v8a,x86_64` dans le workflow.
+
+Reproduire en local (JDK 17+, SDK Android) :
+
+```bash
+npx expo prebuild --platform android --no-install --clean
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+```
+
 ## Structure
 
 ```
