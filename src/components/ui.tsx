@@ -13,7 +13,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { sizes, useColors } from '../theme';
 import { formatInput, parseDecimal, round2 } from '../logic/numbers';
 import { ToastHost } from './ToastHost';
@@ -46,7 +46,7 @@ export function BigButton(props: {
           backgroundColor: bg,
           borderWidth: v === 'secondary' ? 1 : 0,
           borderColor: c.border,
-          paddingHorizontal: 18,
+          paddingHorizontal: 12,
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row',
@@ -56,7 +56,14 @@ export function BigButton(props: {
       ]}
     >
       {props.loading ? <ActivityIndicator color={fg} style={{ marginRight: 8 }} /> : null}
-      <Text style={{ color: fg, fontSize: props.compact ? 16 : sizes.font, fontWeight: '700' }}>{props.title}</Text>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        style={{ color: fg, fontSize: props.compact ? 16 : sizes.font, fontWeight: '700', flexShrink: 1 }}
+      >
+        {props.title}
+      </Text>
     </Pressable>
   );
 }
@@ -188,6 +195,8 @@ export function Sheet(props: {
   const c = useColors();
   return (
     <Modal visible={props.visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={props.onClose}>
+      {/* Une Modal est une nouvelle fenêtre native : elle a besoin de son propre provider d'insets. */}
+      <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top', 'bottom', 'left', 'right']}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.sheetHeader, { borderBottomColor: c.border }]}>
@@ -219,6 +228,7 @@ export function Sheet(props: {
         </KeyboardAvoidingView>
         <ToastHost />
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }

@@ -213,7 +213,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
           <Text style={{ flex: 1, color: c.muted, fontSize: 16, fontWeight: '700' }}>
             {pos + 1} / {activeQueue.length} · {remaining} manquante(s)
           </Text>
-          <BigButton title="▦ Scanner" variant="secondary" compact onPress={() => setScanning(true)} />
+          <BigButton title="Scanner" variant="secondary" compact onPress={() => setScanning(true)} />
         </View>
         <Text style={{ fontSize: 26, fontWeight: '800', color: c.text }}>{lineLabel(current)}</Text>
         <Text style={{ fontSize: 17, color: c.muted, marginBottom: 20 }}>

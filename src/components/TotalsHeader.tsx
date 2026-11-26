@@ -32,7 +32,7 @@ export function TotalsHeader(props: {
     <View style={{ backgroundColor: c.header, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
         <Text style={{ flex: 1, color: c.headerText, fontSize: 20, fontWeight: '800' }} numberOfLines={1}>
-          🛒 {props.listName}
+          {props.listName}
           {props.loading ? '  ⟳' : ''}
         </Text>
         <Pressable

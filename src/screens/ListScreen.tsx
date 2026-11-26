@@ -174,7 +174,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
               paddingBottom: 4,
             }}
           >
-            {section.title} · {section.data.filter((l) => !l.done).length}/{section.data.length}
+            {section.title} · {section.data.filter((l) => l.done).length}/{section.data.length}
           </Text>
         )}
         renderItem={({ item }) => (
@@ -204,8 +204,8 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
 
       <SafeAreaView edges={['bottom']} style={{ backgroundColor: c.card, borderTopWidth: 1, borderTopColor: c.border }}>
         <View style={{ flexDirection: 'row', gap: 10, padding: 10 }}>
-          <BigButton title="＋ Ajouter" variant="secondary" style={{ flex: 1 }} onPress={() => setEditor({ line: null })} disabled={!meta} />
-          <BigButton title="▦ Scanner" variant="secondary" style={{ flex: 1 }} onPress={() => setScanner(true)} disabled={!meta} />
+          <BigButton title="+ Ajouter" variant="secondary" style={{ flex: 1 }} onPress={() => setEditor({ line: null })} disabled={!meta} />
+          <BigButton title="Scanner" variant="secondary" style={{ flex: 1 }} onPress={() => setScanner(true)} disabled={!meta} />
           <BigButton
             title={`Valider (${doneCount})`}
             style={{ flex: 1.2 }}

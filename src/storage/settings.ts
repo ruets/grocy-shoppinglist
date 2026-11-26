@@ -17,7 +17,15 @@ export async function loadSettings(): Promise<AppSettings> {
     SecureStore.getItemAsync(K_LIST),
   ]);
   const listId = list ? Number(list) : NaN;
-  return { url: url ?? '', apiKey: apiKey ?? '', shoppingListId: Number.isFinite(listId) ? listId : null };
+  // Développement uniquement : préremplissage depuis l'environnement si rien n'est enregistré
+  // (ex. simulateur sans copier-coller). Ne jamais définir ces variables pour un build distribué.
+  const devUrl = __DEV__ ? process.env.EXPO_PUBLIC_GROCY_URL : undefined;
+  const devKey = __DEV__ ? process.env.EXPO_PUBLIC_GROCY_API_KEY : undefined;
+  return {
+    url: url || devUrl || '',
+    apiKey: apiKey || devKey || '',
+    shoppingListId: Number.isFinite(listId) ? listId : null,
+  };
 }
 
 export async function saveSettings(s: AppSettings): Promise<void> {

@@ -42,6 +42,14 @@ Le prix payé et la DLC sont stockés localement (AsyncStorage) par ligne, avec 
 
 ## Développement
 
+Dans le simulateur iOS (copier-coller indisponible), on peut préremplir les réglages au premier lancement, **en développement uniquement** :
+
+```bash
+EXPO_PUBLIC_GROCY_URL=https://grocy.exemple.fr EXPO_PUBLIC_GROCY_API_KEY=xxx npx expo start --ios
+```
+
+Ces variables sont intégrées au bundle JS : ne jamais les définir pour un build distribué.
+
 ```bash
 npm run typecheck     # tsc --noEmit
 npm test              # Jest : totaux, lien prix ↔ total, client API (fetch simulé), validation…

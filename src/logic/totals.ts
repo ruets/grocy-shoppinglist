@@ -77,5 +77,7 @@ export function computeTotals(lines: TotalsLine[]): Totals {
 
 /** Préfixe « ~ » pour les estimations. */
 export function formatBucket(b: TotalsBucket, fmt: (n: number) => string): string {
+  // Aucun article de la catégorie n'a de prix : un « 0,00 » serait trompeur.
+  if (b.count > 0 && b.withoutPrice === b.count) return '—';
   return `${b.estimated ? '~' : ''}${fmt(b.total)}`;
 }

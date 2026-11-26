@@ -84,4 +84,11 @@ describe('computeTotals', () => {
     const t = computeTotals([L({ done: true, amount: 2, paidUnitPrice: 1.005 })]);
     expect(formatBucket(t.cart, fmt)).toBe('2.01');
   });
+
+  it('« — » quand aucun article de la catégorie n’a de prix', () => {
+    const t = computeTotals([L({ done: false }), L({ done: true, paidUnitPrice: 2 })]);
+    expect(formatBucket(t.remaining, fmt)).toBe('—');
+    expect(formatBucket(t.cart, fmt)).toBe('2.00');
+    expect(formatBucket(computeTotals([]).cart, fmt)).toBe('0.00');
+  });
 });
