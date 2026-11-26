@@ -1,0 +1,98 @@
+import React from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { ProductPicker } from '../components/ProductPicker';
+import { BigButton, SectionLabel, Sheet } from '../components/ui';
+import { useStore } from '../store/useStore';
+import { sizes, useColors } from '../theme';
+
+/**
+ * Code-barres inconnu de Grocy : l'associer à un produit existant
+ * (en priorité ceux de la liste non cochés) ou créer un nouveau produit.
+ */
+export function UnknownBarcodeModal(props: {
+  barcode: string | null;
+  onClose: () => void;
+  /** Code associé au produit : on enchaîne sur la modale d'achat. */
+  onAssociated: (productId: number) => void;
+}) {
+  const c = useColors();
+  const lines = useStore((s) => s.lines);
+  const addBarcode = useStore((s) => s.addBarcode);
+  const reloadProducts = useStore((s) => s.reloadProducts);
+  const [productId, setProductId] = React.useState<number | null>(null);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => setProductId(null), [props.barcode]);
+
+  // Produits des lignes non cochées, sans doublon, triés par nom.
+  const suggestions = React.useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const l of lines) {
+      if (!l.done && l.product_id !== null && !seen.has(l.product_id)) {
+        seen.set(l.product_id, l.product_name ?? `Produit #${l.product_id}`);
+      }
+    }
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'));
+  }, [lines]);
+
+  const associate = async () => {
+    if (!props.barcode || productId === null) return;
+    setSaving(true);
+    try {
+      await addBarcode(productId, props.barcode);
+      await reloadProducts();
+      props.onAssociated(productId);
+    } catch {
+      /* toast affiché par le store */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Sheet
+      visible={props.barcode !== null}
+      title="Code inconnu"
+      onClose={props.onClose}
+      footer={
+        <BigButton
+          title="Associer le code et continuer"
+          onPress={associate}
+          loading={saving}
+          disabled={productId === null}
+        />
+      }
+    >
+      <Text style={{ color: c.muted, fontSize: 16, marginBottom: 16 }}>
+        Le code {props.barcode} n’est rattaché à aucun produit Grocy. Choisissez le produit correspondant (le code y
+        sera ajouté) ou créez-en un nouveau.
+      </Text>
+
+      {productId === null && suggestions.length > 0 ? (
+        <View style={{ marginBottom: 18 }}>
+          <SectionLabel>Sur la liste</SectionLabel>
+          {suggestions.map(([id, name]) => (
+            <Pressable
+              key={id}
+              onPress={() => setProductId(id)}
+              style={({ pressed }) => ({
+                minHeight: 52,
+                justifyContent: 'center',
+                paddingHorizontal: 14,
+                marginBottom: 6,
+                borderRadius: sizes.radius,
+                borderWidth: 1,
+                borderColor: c.border,
+                backgroundColor: pressed ? c.done : c.card,
+              })}
+            >
+              <Text style={{ fontSize: sizes.font, color: c.text, fontWeight: '600' }}>{name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      <ProductPicker productId={productId} onChange={setProductId} allowFreeText={false} />
+    </Sheet>
+  );
+}
