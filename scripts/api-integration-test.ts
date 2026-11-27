@@ -70,6 +70,7 @@ async function main() {
     locations,
     newProductLocationId: null,
     units: units.length,
+    grocyLocale: typeof config.LOCALE === 'string' ? config.LOCALE : 'en',
   });
   let fixes = pendingFixes(evaluateCheckup(await checkupInput())).filter((f) => f.kind === 'createUserfields');
   if (fixes.length && process.env.GROCY_APPLY_FIXES === '1') {

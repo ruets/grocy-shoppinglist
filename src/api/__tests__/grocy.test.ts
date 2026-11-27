@@ -125,7 +125,18 @@ describe('GrocyClient', () => {
   it('getUserfields normalizes rows', async () => {
     const f = fakeFetch([{ status: 200, body: [{ id: '3', entity: 'shopping_list', name: 'appprice', type: 'number-decimal', caption: 'x' }] }]);
     const c = new GrocyClient('http://g', 'k', f.impl);
-    await expect(c.getUserfields()).resolves.toEqual([{ id: 3, entity: 'shopping_list', name: 'appprice', type: 'number-decimal' }]);
+    await expect(c.getUserfields()).resolves.toEqual([
+      { id: 3, entity: 'shopping_list', name: 'appprice', type: 'number-decimal', caption: 'x' },
+    ]);
+  });
+
+  it('setUserfieldCaption sends only the caption', async () => {
+    const f = fakeFetch([{ status: 204, body: null }]);
+    const c = new GrocyClient('http://g', 'k', f.impl);
+    await c.setUserfieldCaption(8, 'Prix payé (app)');
+    expect(f.calls[0].url).toBe('http://g/api/objects/userfields/8');
+    expect(f.calls[0].init.method).toBe('PUT');
+    expect(JSON.parse(String(f.calls[0].init.body))).toEqual({ caption: 'Prix payé (app)' });
   });
 
   it('createShoppingList posts the name', async () => {

@@ -1,6 +1,6 @@
 import { GrocyClient, GrocyError } from '../../api/grocy';
 import { setLanguage } from '../../i18n';
-import { APP_USERFIELDS, describeFix, evaluateCheckup } from '../checkup';
+import { appUserfields, describeFix, evaluateCheckup } from '../checkup';
 import { groupLines } from '../grouping';
 import { formatBestBefore, NEVER_EXPIRES, parseBestBeforeText } from '../dates';
 import { formatInput, makeMoneyFormatter, parseDecimal } from '../numbers';
@@ -44,8 +44,8 @@ describe('logic texts in English', () => {
   afterEach(() => setLanguage('fr'));
 
   it('checkup labels and fixes', () => {
-    expect(describeFix({ kind: 'createList' })).toBe('Create the list "Shopping list"');
-    expect(describeFix({ kind: 'createUserfields', fields: APP_USERFIELDS.slice(0, 1) })).toBe(
+    expect(describeFix({ kind: 'createList', name: 'Shopping list' })).toBe('Create the list "Shopping list"');
+    expect(describeFix({ kind: 'createUserfields', fields: appUserfields('en').slice(0, 1) })).toBe(
       'Create the field Price paid (app)',
     );
     const r = evaluateCheckup({
@@ -56,6 +56,7 @@ describe('logic texts in English', () => {
       locations: [],
       newProductLocationId: null,
       units: 0,
+      grocyLocale: 'en',
     });
     expect(r[0].label).toBe('API key rejected');
   });

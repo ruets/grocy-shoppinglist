@@ -117,7 +117,9 @@ export function CheckupScreen(props: { blocking: boolean; onClose: () => void; o
               </Text>
             ))}
             <Text style={{ fontSize: 14, color: c.muted, marginTop: 6 }}>
-              {t().checkupScreen.onlyAdds}
+              {fixes.some((f) => f.kind === 'renameUserfields')
+                ? t().checkupScreen.captionsOnly
+                : t().checkupScreen.onlyAdds}
             </Text>
             <BigButton title={t().checkupScreen.repair} loading={busy === 'fix'} onPress={repair} style={{ marginTop: 12 }} />
           </View>
