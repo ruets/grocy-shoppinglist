@@ -6,6 +6,7 @@ import { BigButton, Chip, Field, SectionLabel } from '../components/ui';
 import { ToastHost } from '../components/ToastHost';
 import { useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
+import { locale, t } from '../i18n';
 
 export function SettingsScreen(props: { onDone: () => void; canClose: boolean; onOpenDoctor: () => void }) {
   const c = useColors();
@@ -46,7 +47,7 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
       setLists(ls);
       setLocations(locs);
       if (ls.length && !ls.some((l) => l.id === listId)) setListId(ls[0].id);
-      setStatus({ ok: true, text: `Connecté à Grocy ${info.grocy_version?.Version ?? ''} ✓` });
+      setStatus({ ok: true, text: t().settings.connected(info.grocy_version?.Version ?? '') });
     } catch (e: any) {
       setStatus({ ok: false, text: e?.message ?? String(e) });
     } finally {
@@ -56,7 +57,7 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
 
   const save = async () => {
     if (!url.trim() || !apiKey.trim()) {
-      showToast('URL et clé API sont obligatoires.', 'error');
+      showToast(t().settings.required, 'error');
       return;
     }
     setSaving(true);
@@ -69,7 +70,7 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
       });
       const err = useStore.getState().loadError;
       if (err) showToast(err, 'error');
-      else showToast('Réglages enregistrés', 'success');
+      else showToast(t().settings.saved, 'success');
       props.onDone();
     } catch (e: any) {
       showToast(e?.message ?? String(e), 'error');
@@ -82,30 +83,30 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView contentContainerStyle={{ padding: sizes.pad }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ flex: 1, fontSize: 28, fontWeight: '800', color: c.text }}>Réglages</Text>
-          {props.canClose ? <BigButton title="Fermer" variant="ghost" compact onPress={props.onDone} /> : null}
+          <Text style={{ flex: 1, fontSize: 28, fontWeight: '800', color: c.text }}>{t().common.settings}</Text>
+          {props.canClose ? <BigButton title={t().common.close} variant="ghost" compact onPress={props.onDone} /> : null}
         </View>
 
         <Field
-          label="URL de Grocy"
+          label={t().settings.url}
           placeholder="https://grocy.maison.lan"
           value={url}
           onChangeText={setUrl}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
-          hint="Sans « /api ». HTTPS recommandé (voir README)."
+          hint={t().settings.urlHint}
         />
         <Field
-          label="Clé API"
-          placeholder="Grocy → Gérer les clés API"
+          label={t().settings.apiKey}
+          placeholder={t().settings.apiKeyPlaceholder}
           value={apiKey}
           onChangeText={setApiKey}
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry
         />
-        <BigButton title="Tester la connexion" variant="secondary" loading={testing} onPress={test} />
+        <BigButton title={t().settings.test} variant="secondary" loading={testing} onPress={test} />
         {status ? (
           <Text style={{ marginTop: 10, fontSize: 16, fontWeight: '600', color: status.ok ? c.primary : c.danger }}>
             {status.text}
@@ -113,11 +114,11 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
         ) : null}
 
         <View style={{ marginTop: 24 }}>
-          <SectionLabel>Liste de courses</SectionLabel>
+          <SectionLabel>{t().settings.list}</SectionLabel>
           {lists === null ? (
-            <Text style={{ color: c.muted, fontSize: 16 }}>Testez la connexion pour charger les listes.</Text>
+            <Text style={{ color: c.muted, fontSize: 16 }}>{t().settings.listsHint}</Text>
           ) : lists.length === 0 ? (
-            <Text style={{ color: c.muted, fontSize: 16 }}>Aucune liste dans Grocy.</Text>
+            <Text style={{ color: c.muted, fontSize: 16 }}>{t().settings.noList}</Text>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {lists.map((l) => (
@@ -128,35 +129,35 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
         </View>
 
         <View style={{ marginTop: 24 }}>
-          <SectionLabel>Emplacement des nouveaux produits</SectionLabel>
+          <SectionLabel>{t().settings.newLocation}</SectionLabel>
           {locations === null ? (
-            <Text style={{ color: c.muted, fontSize: 16 }}>Testez la connexion pour charger les emplacements.</Text>
+            <Text style={{ color: c.muted, fontSize: 16 }}>{t().settings.locationsHint}</Text>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <Chip label="Préréglage Grocy" selected={newLocId === null} onPress={() => setNewLocId(null)} />
+              <Chip label={t().settings.grocyPreset} selected={newLocId === null} onPress={() => setNewLocId(null)} />
               {[...locations]
-                .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+                .sort((a, b) => a.name.localeCompare(b.name, locale()))
                 .map((l) => (
                   <Chip key={l.id} label={l.name} selected={l.id === newLocId} onPress={() => setNewLocId(l.id)} />
                 ))}
               {newLocId !== null && !locations.some((l) => l.id === newLocId) ? (
-                <Chip label="Introuvable" selected onPress={() => setNewLocId(null)} />
+                <Chip label={t().settings.notFound} selected onPress={() => setNewLocId(null)} />
               ) : null}
             </View>
           )}
           <Text style={{ color: c.muted, fontSize: 14, marginTop: 6 }}>
-            Les produits créés depuis l’app y sont rangés, à déplacer ensuite dans Grocy.
+            {t().settings.newLocationHint}
           </Text>
         </View>
 
-        <BigButton title="Enregistrer" loading={saving} onPress={save} style={{ marginTop: 28 }} />
+        <BigButton title={t().common.save} loading={saving} onPress={save} style={{ marginTop: 28 }} />
 
         {props.canClose ? (
           <View style={{ marginTop: 32 }}>
-            <SectionLabel>Diagnostic</SectionLabel>
-            <BigButton title="Grocy Doctor" variant="secondary" onPress={props.onOpenDoctor} />
+            <SectionLabel>{t().settings.diagnostic}</SectionLabel>
+            <BigButton title={t().settings.doctor} variant="secondary" onPress={props.onOpenDoctor} />
             <Text style={{ color: c.muted, fontSize: 14, marginTop: 6 }}>
-              Vérifie que Grocy a tout ce qu’il faut à l’app, et propose de l’ajouter.
+              {t().settings.doctorHint}
             </Text>
           </View>
         ) : null}

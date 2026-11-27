@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Grocy convention for "never expires". */
@@ -62,10 +64,21 @@ export function formatIsoDateFr(iso: string | null | undefined): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
-/** Like formatIsoDateFr, but « jamais » (never) for NEVER_EXPIRES. */
+/** Like formatIsoDateFr, but « jamais » / « never » (current language) for NEVER_EXPIRES. */
 export function formatBestBefore(iso: string | null | undefined): string {
-  if (iso === NEVER_EXPIRES) return 'jamais';
+  if (iso === NEVER_EXPIRES) return t().dates.never;
   return formatIsoDateFr(iso);
+}
+
+/** Words accepted for "never expires", whatever the language. */
+const NEVER_WORDS = ['jamais', 'never'];
+
+/** Typed text → ISO date (or never expires). null if empty, 'invalid' if unreadable. */
+export function parseBestBeforeText(text: string): string | null | 'invalid' {
+  const s = text.trim();
+  if (!s) return null;
+  if (NEVER_WORDS.includes(s.toLowerCase())) return NEVER_EXPIRES;
+  return parseUserDate(s) ?? 'invalid';
 }
 
 export function addDays(days: number, from = new Date()): string {

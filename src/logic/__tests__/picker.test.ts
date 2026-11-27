@@ -1,5 +1,4 @@
 import type { Product } from '../../api/grocy';
-import { NO_GROUP } from '../grouping';
 import { pickerSections } from '../picker';
 
 const p = (id: number, name: string, group: number | null): Product => ({
@@ -22,14 +21,14 @@ const groups = [
 describe('pickerSections', () => {
   it('empty query → products grouped by aisle A→Z, then « Sans rayon »', () => {
     const s = pickerSections(products, '', groups);
-    expect(s.map((x) => x.title)).toEqual(['Boulangerie', 'Frais', NO_GROUP]);
+    expect(s.map((x) => x.title)).toEqual(['Boulangerie', 'Frais', 'Sans rayon']);
     expect(s[1].data.map((x) => x.name)).toEqual(['Beurre', 'Yaourt']);
     // Unknown group id → « Sans rayon »
     expect(s[2].data.map((x) => x.name)).toEqual(['Éponge', 'Lait']);
   });
 
   it('blank query behaves like empty', () => {
-    expect(pickerSections(products, '   ', groups).map((x) => x.title)).toEqual(['Boulangerie', 'Frais', NO_GROUP]);
+    expect(pickerSections(products, '   ', groups).map((x) => x.title)).toEqual(['Boulangerie', 'Frais', 'Sans rayon']);
   });
 
   it('query → one untitled section with search results', () => {

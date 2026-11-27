@@ -22,6 +22,7 @@ import {
 } from "../logic/priceLink";
 import { stockUnitName, useStore } from "../store/useStore";
 import { useColors } from "../theme";
+import { t as tr } from '../i18n';
 
 export type PurchaseTarget =
   | { kind: "line"; line: ShoppingLine; amount: number }
@@ -96,10 +97,10 @@ export function PurchaseModal(props: {
     t.kind === "line"
       ? lineLabel(t.line)
       : (meta?.productsById.get(t.productId)?.name ??
-        `Produit #${t.productId}`);
+        tr().common.productN(t.productId));
   // Off-stock items have no Grocy unit.
   const unitOf = (n: number) =>
-    free ? (n > 1 ? "unités" : "unité") : stockUnitName(meta, productId, n);
+    free ? tr().common.units(n) : stockUnitName(meta, productId, n);
   const unitName = unitOf(price.qty);
   const parsedRaw = parseBestBeforeText(dateText);
   const dateInvalid = parsedRaw === "invalid";
@@ -168,13 +169,13 @@ export function PurchaseModal(props: {
   return (
     <Sheet
       visible
-      title={`${t.kind === "offList" ? "Hors liste · " : ""}${title}`}
+      title={`${t.kind === "offList" ? tr().purchase.offListPrefix : ""}${title}`}
       onClose={props.onClose}
       footer={
         <>
           <BigButton
             title={
-              (alreadyDone ? "Mettre à jour" : "Mettre dans le panier") +
+              (alreadyDone ? tr().purchase.update : tr().purchase.putInCart) +
               (total !== null ? ` · ${money(total)}` : "")
             }
             onPress={confirm}
@@ -183,7 +184,7 @@ export function PurchaseModal(props: {
           />
           {t.kind === "line" ? (
             <BigButton
-              title="＋ Autre prix"
+              title={tr().purchase.otherPrice}
               variant="secondary"
               onPress={otherPrice}
               disabled={saving || !(price.qty > 0) || (!free && dateInvalid)}
@@ -191,7 +192,7 @@ export function PurchaseModal(props: {
           ) : null}
           {alreadyDone ? (
             <BigButton
-              title="Retirer du panier"
+              title={tr().purchase.removeFromCart}
               variant="secondary"
               onPress={removeFromCart}
               disabled={saving}
@@ -209,19 +210,17 @@ export function PurchaseModal(props: {
             fontWeight: "600",
           }}
         >
-          Ce produit n’est pas sur la liste : il y sera ajouté, déjà coché, à la
-          validation.
+          {tr().purchase.offListNotice}
         </Text>
       ) : null}
 
       {free ? (
         <Text style={{ color: c.muted, fontSize: 15, marginBottom: 12 }}>
-          Hors stock : compté dans le total, puis retiré de la liste à la
-          validation.
+          {tr().purchase.offStockNotice}
         </Text>
       ) : null}
       <>
-        <SectionLabel>Quantité</SectionLabel>
+        <SectionLabel>{tr().common.quantity}</SectionLabel>
         <Stepper
           value={price.qty}
           onChange={(q) => dispatch({ type: "qty", qty: q })}
@@ -232,11 +231,11 @@ export function PurchaseModal(props: {
         <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
           <View style={{ flex: 1 }}>
             <Field
-              label={`Prix / ${unitOf(1) || "unité"}`}
+              label={tr().purchase.unitPrice(unitOf(1) || tr().purchase.unitFallback)}
               value={price.unitText}
               onChangeText={(text) => dispatch({ type: "unit", text })}
               keyboardType="decimal-pad"
-              placeholder="0,00"
+              placeholder={tr().common.zeroPrice}
               selectTextOnFocus
               style={
                 price.anchor === "unit"
@@ -247,11 +246,11 @@ export function PurchaseModal(props: {
           </View>
           <View style={{ flex: 1 }}>
             <Field
-              label="Total ligne"
+              label={tr().purchase.lineTotal}
               value={price.totalText}
               onChangeText={(text) => dispatch({ type: "total", text })}
               keyboardType="decimal-pad"
-              placeholder="0,00"
+              placeholder={tr().common.zeroPrice}
               selectTextOnFocus
               style={
                 price.anchor === "total"
@@ -263,8 +262,10 @@ export function PurchaseModal(props: {
         </View>
         {t.kind === "line" && t.line.last_price !== null ? (
           <Text style={{ color: c.muted, marginTop: -6, marginBottom: 14 }}>
-            Dernier prix connu : {money(t.line.last_price)} /{" "}
-            {stockUnitName(meta, productId, 1) || "unité"}
+            {tr().purchase.lastPrice(
+              money(t.line.last_price),
+              stockUnitName(meta, productId, 1) || tr().purchase.unitFallback,
+            )}
           </Text>
         ) : null}
 
@@ -273,8 +274,8 @@ export function PurchaseModal(props: {
             productId={productId}
             text={dateText}
             onChangeText={setDateText}
-            label="Date de péremption (facultative ici)"
-            placeholder="JJMM — à remplir plus tard si besoin"
+            label={tr().purchase.dateLabel}
+            placeholder={tr().purchase.datePlaceholder}
             allowEmpty
           />
         ) : null}

@@ -16,6 +16,7 @@ import { ItemEditorModal } from './ItemEditorModal';
 import { PurchaseModal, type PurchaseTarget } from './PurchaseModal';
 import { ScannerModal } from './ScannerModal';
 import { UnknownBarcodeModal } from './UnknownBarcodeModal';
+import { t } from '../i18n';
 
 const AUTO_REFRESH_MS = 20_000;
 /** iOS cannot present a modal while another one is being dismissed. */
@@ -74,7 +75,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
       ),
     [lines],
   );
-  const listName = meta?.shoppingLists.find((l) => l.id === settings.shoppingListId)?.name ?? 'Courses';
+  const listName = meta?.shoppingLists.find((l) => l.id === settings.shoppingListId)?.name ?? t().list.defaultName;
   const doneCount = lines.filter((l) => l.done).length;
 
   const onCheck = React.useCallback((line: ShoppingLine) => {
@@ -97,7 +98,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
     setLookup(code);
     const { client } = useStore.getState();
     try {
-      if (!client) throw new Error('Grocy non configuré');
+      if (!client) throw new Error(t().errors.notConfigured);
       const details = await client.getProductByBarcode(code);
       setLookup(null);
       if (!details) {
@@ -115,7 +116,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
   const onBarcodeAssociated = async (productId: number) => {
     const code = unknownCode;
     setUnknownCode(null);
-    showToast(`Code ${code ?? ''} associé`, 'success');
+    showToast(t().list.codeAssociated(code ?? ''), 'success');
     // Last known price, read back through the newly associated barcode.
     const client = useStore.getState().client;
     const details = code && client ? await client.getProductByBarcode(code).catch(() => null) : null;
@@ -129,15 +130,15 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
     body = (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color={c.primary} />
-        <Text style={{ color: c.muted, marginTop: 12, fontSize: 16 }}>Chargement de Grocy…</Text>
+        <Text style={{ color: c.muted, marginTop: 12, fontSize: 16 }}>{t().common.loading}</Text>
       </View>
     );
   } else if (!meta && loadError) {
     body = (
       <View style={{ flex: 1, padding: sizes.pad, justifyContent: 'center', gap: 12 }}>
         <Text style={{ color: c.danger, fontSize: 18, fontWeight: '700' }}>{loadError}</Text>
-        <BigButton title="Réessayer" onPress={loadAll} />
-        <BigButton title="Réglages" variant="secondary" onPress={props.onOpenSettings} />
+        <BigButton title={t().common.retry} onPress={loadAll} />
+        <BigButton title={t().common.settings} variant="secondary" onPress={props.onOpenSettings} />
       </View>
     );
   } else {
@@ -157,7 +158,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
         }
         ListEmptyComponent={
           <Text style={{ color: c.muted, textAlign: 'center', marginTop: 60, fontSize: 18 }}>
-            La liste est vide.{'\n'}Ajoutez un article ou scannez un produit.
+            {t().list.empty}
           </Text>
         }
         renderSectionHeader={({ section }) => (
@@ -203,10 +204,10 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
 
       <SafeAreaView edges={['bottom']} style={{ backgroundColor: c.card, borderTopWidth: 1, borderTopColor: c.border }}>
         <View style={{ flexDirection: 'row', gap: 10, padding: 10 }}>
-          <BigButton title="+ Ajouter" variant="secondary" style={{ flex: 1 }} onPress={() => setEditor({ line: null })} disabled={!meta} />
-          <BigButton title="Scanner" variant="secondary" style={{ flex: 1 }} onPress={() => setScanner(true)} disabled={!meta} />
+          <BigButton title={t().list.add} variant="secondary" style={{ flex: 1 }} onPress={() => setEditor({ line: null })} disabled={!meta} />
+          <BigButton title={t().list.scan} variant="secondary" style={{ flex: 1 }} onPress={() => setScanner(true)} disabled={!meta} />
           <BigButton
-            title={`Valider (${doneCount})`}
+            title={t().list.checkout(doneCount)}
             style={{ flex: 1.2 }}
             onPress={() => setCheckoutOpen(true)}
             disabled={doneCount === 0}
@@ -226,7 +227,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
           }}
         >
           <ActivityIndicator size="large" color="#FFF" />
-          <Text style={{ color: '#FFF', marginTop: 12, fontSize: 17, textAlign: 'center' }}>Code {lookup}</Text>
+          <Text style={{ color: '#FFF', marginTop: 12, fontSize: 17, textAlign: 'center' }}>{t().list.code(lookup ?? '')}</Text>
         </View>
       ) : null}
 

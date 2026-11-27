@@ -31,7 +31,8 @@
           "cameraPermission": "La caméra sert à scanner les codes-barres des produits."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-localization"
     ]
   }
 }

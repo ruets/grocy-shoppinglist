@@ -1,7 +1,7 @@
 import type { ShoppingLine } from '../../api/grocy';
 import { normalizeBaseUrl } from '../../api/grocy';
 import { formatBestBefore, NEVER_EXPIRES, parseUserDate, productDefaultBestBefore } from '../dates';
-import { groupLines, NO_GROUP, OFF_STOCK } from '../grouping';
+import { groupLines } from '../grouping';
 import { decideScan } from '../scan';
 import { searchByName } from '../text';
 
@@ -40,7 +40,7 @@ describe('groupLines', () => {
       line({ id: 3 }),
       line({ id: 4, product_group_name: 'Boulangerie' }),
     ], new Map());
-    expect(s.map((x) => x.title)).toEqual(['Boulangerie', 'Fruits', NO_GROUP, OFF_STOCK]);
+    expect(s.map((x) => x.title)).toEqual(['Boulangerie', 'Fruits', 'Sans rayon', 'Articles hors stock']);
   });
 
   const aisles = new Map([[3, 'Frais']]);

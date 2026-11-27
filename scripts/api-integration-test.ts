@@ -132,7 +132,7 @@ async function main() {
   check(added && added.amount === 2 && !added.done && added.product_name === name, 'product line present (2, unchecked)');
   check(lines.some((l) => l.id === freeId && l.product_id === null), 'free-text line present');
 
-  console.log('4b. Off-stock aisle (« Rayon (app) »)');
+  console.log('4b. Off-stock aisle (« Aisle (app) »)');
   const groups = await client.getProductGroups();
   if (groups.length) {
     await client.setLineFields(freeId, { aisleId: groups[0].id });

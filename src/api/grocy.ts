@@ -4,6 +4,8 @@
  * as well as from the Node integration script (scripts/api-integration-test.ts).
  */
 
+import { t } from '../i18n';
+
 export interface ShoppingList {
   id: number;
   name: string;
@@ -57,11 +59,11 @@ export interface ShoppingLine {
   /** Last purchase price per stock unit (null if unknown). */
   last_price: number | null;
   product_group_name: string | null;
-  /** « Prix payé (app) » userfield: price paid per stock unit. */
+  /** « Price paid (app) » userfield: price paid per stock unit. */
   paid_price: number | null;
-  /** « DLC (app) » userfield, YYYY-MM-DD. */
+  /** « Best before (app) » userfield, YYYY-MM-DD. */
   best_before: string | null;
-  /** « Rayon (app) » userfield: product group id (off-stock items). */
+  /** « Aisle (app) » userfield: product group id (off-stock items). */
   aisle_id: number | null;
 }
 
@@ -182,7 +184,7 @@ function lineFields(uf: any): Pick<ShoppingLine, 'paid_price' | 'best_before' | 
 }
 
 /** Userfield names on the `shopping_list` entity (see logic/checkup APP_USERFIELDS). */
-export const UF = { price: 'appprix', bestBefore: 'appdlc', aisle: 'apprayon' } as const;
+export const UF = { price: 'appprice', bestBefore: 'appbestbefore', aisle: 'appaisle' } as const;
 
 export function normalizeBaseUrl(raw: string): string {
   let url = raw.trim();
@@ -228,13 +230,9 @@ export class GrocyClient {
       });
     } catch (e: any) {
       if (e?.name === 'AbortError') {
-        throw new GrocyError('Grocy ne répond pas (délai dépassé). Vérifiez le réseau / VPN.', null, 'timeout');
+        throw new GrocyError(t().errors.timeout, null, 'timeout');
       }
-      throw new GrocyError(
-        "Impossible de joindre Grocy. Vérifiez l'URL et la connexion (Wi-Fi / VPN).",
-        null,
-        'network',
-      );
+      throw new GrocyError(t().errors.network, null, 'network');
     } finally {
       clearTimeout(timer);
     }
@@ -251,7 +249,7 @@ export class GrocyClient {
 
     if (!res.ok) {
       if (res.status === 401) {
-        throw new GrocyError('Clé API refusée par Grocy (401).', 401, 'auth');
+        throw new GrocyError(t().errors.auth, 401, 'auth');
       }
       const msg =
         (data && typeof data === 'object' && data.error_message) ||
@@ -423,7 +421,7 @@ export class GrocyClient {
       return toInt(res.created_object_id);
     } catch (e) {
       if (e instanceof GrocyError && /UNIQUE constraint failed: product_barcodes\.barcode/i.test(e.message)) {
-        throw new GrocyError(`Le code ${barcode} est déjà associé à un autre produit dans Grocy.`, e.status);
+        throw new GrocyError(t().errors.barcodeTaken(barcode), e.status);
       }
       throw e;
     }

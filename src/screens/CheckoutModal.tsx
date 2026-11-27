@@ -10,6 +10,7 @@ import { computeTotals, formatBucket, linePrice } from '../logic/totals';
 import { stockUnitName, useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
 import { ScannerModal } from './ScannerModal';
+import { t } from '../i18n';
 
 type Phase = 'dates' | 'recap' | 'result';
 
@@ -87,10 +88,10 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
   };
   React.useEffect(() => () => flushDate(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onDateText = (t: string) => {
-    setDateText(t);
+  const onDateText = (text: string) => {
+    setDateText(text);
     if (!current) return;
-    const p = parseBestBeforeText(t);
+    const p = parseBestBeforeText(text);
     if (p === 'invalid') return;
     if (timer.current) clearTimeout(timer.current);
     if (p === current.best_before) {
@@ -103,7 +104,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
 
   const goNext = () => {
     if (parseBestBeforeText(dateText) === 'invalid') {
-      showToast('Date invalide', 'error');
+      showToast(t().checkout.invalidDate, 'error');
       return;
     }
     flushDate();
@@ -121,7 +122,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
         ? useStore.getState().lines.find((l) => l.done && l.product_id === details.product.id)
         : undefined;
       if (!target) {
-        showToast(details ? `« ${details.product.name} » n’est pas dans le panier` : `Code ${code} inconnu`, 'error');
+        showToast(details ? t().common.notInCart(details.product.name) : t().common.unknownCode(code), 'error');
         return;
       }
       const at = activeQueue.indexOf(target.id);
@@ -155,7 +156,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
       const r = await checkout(locationId, (d, t) => setProgress([d, t]));
       setResult(r);
     } catch (e: any) {
-      setResult({ ok: [], errors: [{ id: 0, label: 'Validation', message: e?.message ?? String(e) }] });
+      setResult({ ok: [], errors: [{ id: 0, label: t().checkout.errorLabel, message: e?.message ?? String(e) }] });
     } finally {
       setRunning(false);
       setPhase('result');
@@ -167,12 +168,12 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
     return (
       <Sheet
         visible={props.visible}
-        title="Résultat"
+        title={t().checkout.resultTitle}
         onClose={props.onClose}
-        footer={<BigButton title="Terminé" onPress={props.onClose} />}
+        footer={<BigButton title={t().checkout.done} onPress={props.onClose} />}
       >
         <Text style={{ fontSize: 20, fontWeight: '800', color: result.errors.length ? c.warn : c.primary }}>
-          {result.ok.length} article(s) traité(s){result.errors.length ? `, ${result.errors.length} en erreur` : ' ✓'}
+          {t().checkout.result(result.ok.length, result.errors.length)}
         </Text>
         {result.errors.map((e) => (
           <View key={e.id} style={{ marginTop: 12, padding: 12, borderRadius: sizes.radius, backgroundColor: c.card }}>
@@ -182,8 +183,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
         ))}
         {result.errors.length ? (
           <Text style={{ color: c.muted, marginTop: 16, fontSize: 15 }}>
-            Les articles en erreur restent cochés : vous pouvez relancer la validation. Ceux déjà ajoutés au stock ne
-            seront pas ajoutés deux fois.
+            {t().checkout.retryHint}
           </Text>
         ) : null}
       </Sheet>
@@ -197,11 +197,11 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
       return (
         <Sheet
           visible={props.visible}
-          title="Dates de péremption"
+          title={t().checkout.datesTitle}
           onClose={props.onClose}
           footer={
             <BigButton
-              title="Voir le récapitulatif"
+              title={t().checkout.seeRecap}
               onPress={() => {
                 flushDate();
                 setPhase('recap');
@@ -209,7 +209,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
             />
           }
         >
-          <Text style={{ color: c.muted, fontSize: 17 }}>Toutes les dates sont saisies.</Text>
+          <Text style={{ color: c.muted, fontSize: 17 }}>{t().checkout.allDatesSet}</Text>
         </Sheet>
       );
     }
@@ -218,13 +218,13 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
     return (
       <Sheet
         visible={props.visible}
-        title="Dates de péremption"
+        title={t().checkout.datesTitle}
         onClose={props.onClose}
         footer={
           <>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <BigButton
-                title="‹ Préc."
+                title={t().checkout.prev}
                 variant="secondary"
                 style={{ flex: 1 }}
                 disabled={pos === 0}
@@ -234,7 +234,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
                 }}
               />
               <BigButton
-                title={pos + 1 >= activeQueue.length ? 'Récapitulatif ›' : hasDate ? 'Suivant ›' : 'Passer ›'}
+                title={pos + 1 >= activeQueue.length ? t().checkout.recap : hasDate ? t().checkout.next : t().checkout.skip}
                 style={{ flex: 2 }}
                 onPress={goNext}
               />
@@ -244,9 +244,9 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
           <Text style={{ flex: 1, color: c.muted, fontSize: 16, fontWeight: '700' }}>
-            {pos + 1} / {activeQueue.length} · {remaining} manquante(s)
+            {t().checkout.position(pos + 1, activeQueue.length, remaining)}
           </Text>
-          <BigButton title="Scanner" variant="secondary" compact onPress={() => setScanning(true)} />
+          <BigButton title={t().list.scan} variant="secondary" compact onPress={() => setScanning(true)} />
         </View>
         <Text style={{ fontSize: 26, fontWeight: '800', color: c.text }}>{lineLabel(current)}</Text>
         <Text style={{ fontSize: 17, color: c.muted, marginBottom: 20 }}>
@@ -260,7 +260,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
           onSubmit={goNext}
         />
         <Text style={{ color: c.muted, fontSize: 14, marginTop: 16 }}>
-          Scanner un produit du panier pour aller directement à sa date.
+          {t().checkout.scanHint}
         </Text>
         <ScannerModal visible={scanning} onClose={() => setScanning(false)} onScanned={onScanned} />
       </Sheet>
@@ -271,16 +271,16 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
   return (
     <Sheet
       visible={props.visible}
-      title="Valider les achats"
+      title={t().checkout.title}
       onClose={running ? () => {} : props.onClose}
       footer={
         <BigButton
           title={
             running && progress
-              ? `Validation… ${progress[0]}/${progress[1]}`
+              ? t().checkout.running(progress[0], progress[1])
               : missing.length > 0
-                ? `${missing.length} date(s) manquante(s)`
-                : `Valider ${checked.length} article(s) · ${formatBucket(cart, money)}`
+                ? t().checkout.missingDates(missing.length)
+                : t().checkout.confirm(checked.length, formatBucket(cart, money))
           }
           onPress={run}
           loading={running}
@@ -294,13 +294,13 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
           style={{ padding: 14, borderRadius: sizes.radius, backgroundColor: c.danger, marginBottom: 14 }}
         >
           <Text style={{ color: '#FFF', fontSize: 17, fontWeight: '800' }}>
-            {missing.length} date(s) de péremption manquante(s) — Saisir ›
+            {t().checkout.missingBanner(missing.length)}
           </Text>
         </Pressable>
       ) : null}
 
       {checked.length === 0 ? (
-        <Text style={{ color: c.muted, fontSize: 17 }}>Le panier est vide.</Text>
+        <Text style={{ color: c.muted, fontSize: 17 }}>{t().checkout.emptyCart}</Text>
       ) : (
         checked.map((l) => {
           const p = linePrice(toTotals(l));
@@ -323,26 +323,26 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
                 <Text style={{ fontSize: 17, fontWeight: '700', color: c.text }}>{lineLabel(l)}</Text>
                 <Text style={{ fontSize: 14, color: c.muted }}>
                   {free
-                    ? 'Hors stock — retiré de la liste'
+                    ? t().checkout.offStock
                     : `${formatAmount(l.amount)} ${stockUnitName(meta, l.product_id, l.amount)}${
-                        l.id in stocked ? ' · déjà en stock' : ''
+                        l.id in stocked ? t().checkout.alreadyStocked : ''
                       }`}
                 </Text>
                 {!free ? (
                   <Text style={{ fontSize: 14, fontWeight: '700', color: bb ? c.muted : c.danger }}>
-                    {bb ? `DLC : ${formatBestBefore(bb)}` : 'Date manquante'}
+                    {bb ? t().checkout.bestBefore(formatBestBefore(bb)) : t().checkout.missingDate}
                   </Text>
                 ) : null}
               </View>
               <Text style={{ fontSize: 17, fontWeight: '700', color: p.estimated ? c.muted : c.text }}>
-                {p.value === null ? 'sans prix' : `${p.estimated ? '~' : ''}${money(p.value)}`}
+                {p.value === null ? t().common.noPrice : `${p.estimated ? '~' : ''}${money(p.value)}`}
               </Text>
             </Pressable>
           );
         })
       )}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 }}>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: c.text }}>Total</Text>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: c.text }}>{t().checkout.total}</Text>
         <Text style={{ fontSize: 20, fontWeight: '800', color: c.text }}>{formatBucket(cart, money)}</Text>
       </View>
       {cart.withoutPrice > 0 ? (
@@ -350,9 +350,9 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
       ) : null}
 
       <View style={{ marginTop: 24 }}>
-        <SectionLabel>Magasin</SectionLabel>
+        <SectionLabel>{t().checkout.store}</SectionLabel>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <Chip label="Aucun" selected={locationId === null} onPress={() => setLocationId(null)} />
+          <Chip label={t().checkout.noStore} selected={locationId === null} onPress={() => setLocationId(null)} />
           {(meta?.shoppingLocations ?? []).map((l) => (
             <Chip key={l.id} label={l.name} selected={locationId === l.id} onPress={() => setLocationId(l.id)} />
           ))}

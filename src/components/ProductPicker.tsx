@@ -4,6 +4,7 @@ import { pickerSections } from '../logic/picker';
 import { useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
 import { BigButton, Field, SectionLabel } from './ui';
+import { t } from '../i18n';
 
 /**
  * Grocy products grouped by aisle (empty search) or accent-insensitive search,
@@ -43,7 +44,7 @@ export function ProductPicker(props: {
         }}
       >
         <Text style={{ flex: 1, fontSize: sizes.font, fontWeight: '700', color: c.text }}>{selected.name}</Text>
-        <BigButton title="Changer" variant="ghost" compact onPress={() => props.onChange(null)} />
+        <BigButton title={t().common.change} variant="ghost" compact onPress={() => props.onChange(null)} />
       </View>
     );
   }
@@ -54,7 +55,7 @@ export function ProductPicker(props: {
     setCreating(true);
     try {
       const id = await createProduct(name);
-      showToast(`Produit « ${name} » créé dans Grocy`, 'success');
+      showToast(t().picker.created(name), 'success');
       setQuery('');
       props.onChange(id);
     } catch {
@@ -67,24 +68,24 @@ export function ProductPicker(props: {
   return (
     <View style={{ marginBottom: 6 }}>
       <Field
-        label="Produit Grocy"
-        placeholder="Rechercher (ex. « pates », « creme »)"
+        label={t().picker.label}
+        placeholder={t().picker.placeholder}
         value={query}
         onChangeText={setQuery}
         autoCorrect={false}
-        hint="Introuvable ? Tapez son nom : vous pourrez le créer."
+        hint={t().picker.hint}
       />
       {query.trim() && !exact ? (
         <View style={{ gap: 8, marginBottom: 12 }}>
           <BigButton
-            title={`＋ Créer « ${query.trim()} » dans Grocy`}
+            title={t().picker.create(query.trim())}
             variant="secondary"
             loading={creating}
             onPress={create}
           />
           {props.onOffStock ? (
             <BigButton
-              title={`＋ Ajouter « ${query.trim()} » hors stock`}
+              title={t().picker.addOffStock(query.trim())}
               variant="secondary"
               onPress={() => props.onOffStock!(query.trim().replace(/\s+/g, ' '))}
             />

@@ -1,16 +1,18 @@
 import { UF, type GrocyError, type NamedEntity } from '../api/grocy';
+import { t } from '../i18n';
 
-/** Userfields the app needs on Grocy's `shopping_list` entity. */
+/** Userfields the app needs on Grocy's `shopping_list` entity. Captions are stored in Grocy: English in every language. */
 export const APP_USERFIELDS = [
-  { name: UF.price, caption: 'Prix payé (app)', type: 'number-decimal' },
-  { name: UF.bestBefore, caption: 'DLC (app)', type: 'date' },
-  { name: UF.aisle, caption: 'Rayon (app)', type: 'number-integral' },
+  { name: UF.price, caption: 'Price paid (app)', type: 'number-decimal' },
+  { name: UF.bestBefore, caption: 'Best before (app)', type: 'date' },
+  { name: UF.aisle, caption: 'Aisle (app)', type: 'number-integral' },
 ] as const;
 
 export type AppUserfield = (typeof APP_USERFIELDS)[number];
 
 export const USERFIELD_ENTITY = 'shopping_list';
-export const DEFAULT_LIST_NAME = 'Liste de courses';
+/** Name of the list the Doctor creates; stored in Grocy, so the same in every language. */
+export const DEFAULT_LIST_NAME = 'Shopping list';
 
 export type CheckStatus = 'ok' | 'warning' | 'missing' | 'error';
 
@@ -49,34 +51,35 @@ function majorVersion(v: string): number {
  * only described here, and applied by the store after the user confirms.
  */
 export function evaluateCheckup(input: CheckupInput): CheckResult[] {
+  const m = t().checkup;
   if (!input.server.ok) {
     const e = input.server.error;
     const label =
-      e.kind === 'auth' ? 'Clé API refusée' : e.kind === 'timeout' || e.kind === 'network' ? 'Serveur injoignable' : 'Erreur Grocy';
+      e.kind === 'auth' ? m.authRefused : e.kind === 'timeout' || e.kind === 'network' ? m.serverDown : m.grocyError;
     return [{ id: 'server', status: 'error', label, detail: e.message, fix: { kind: 'openSettings' } }];
   }
 
-  const results: CheckResult[] = [{ id: 'server', status: 'ok', label: 'Serveur et clé API' }];
+  const results: CheckResult[] = [{ id: 'server', status: 'ok', label: m.serverOk }];
 
   const version = input.server.version;
   results.push(
     majorVersion(version) >= 4
-      ? { id: 'version', status: 'ok', label: `Grocy ${version}` }
-      : { id: 'version', status: 'warning', label: `Grocy ${version || 'version inconnue'}`, detail: 'Version 4.0 ou plus recommandée.' },
+      ? { id: 'version', status: 'ok', label: m.version(version) }
+      : { id: 'version', status: 'warning', label: m.version(version || m.unknownVersion), detail: m.versionHint },
   );
 
   if (input.lists.length === 0) {
-    results.push({ id: 'list', status: 'missing', label: 'Aucune liste de courses', fix: { kind: 'createList' } });
+    results.push({ id: 'list', status: 'missing', label: m.noList, fix: { kind: 'createList' } });
   } else {
     const selected = input.lists.find((l) => l.id === input.selectedListId);
     if (selected) {
-      results.push({ id: 'list', status: 'ok', label: `Liste « ${selected.name} »` });
+      results.push({ id: 'list', status: 'ok', label: m.listOk(selected.name) });
     } else {
       const first = input.lists[0];
       results.push({
         id: 'list',
         status: 'missing',
-        label: input.selectedListId === null ? 'Aucune liste choisie' : 'Liste choisie introuvable',
+        label: input.selectedListId === null ? m.noListChosen : m.listGone,
         fix: { kind: 'selectList', listId: first.id, listName: first.name },
       });
     }
@@ -89,31 +92,29 @@ export function evaluateCheckup(input: CheckupInput): CheckResult[] {
     results.push({
       id: 'userfields',
       status: 'error',
-      label: 'Champ Grocy de mauvais type',
-      detail:
-        wrongType.map((f) => `${f.name} devrait être « ${f.type} »`).join(', ') +
-        '. Corrigez ou supprimez ce champ dans Grocy (Gérer les données → Champs personnalisés).',
+      label: m.wrongType,
+      detail: wrongType.map((f) => m.wrongTypeItem(f.name, f.type)).join(', ') + m.wrongTypeHint,
     });
   } else if (missing.length > 0) {
     results.push({
       id: 'userfields',
       status: 'missing',
-      label: 'Champs de l’app manquants',
+      label: m.fieldsMissing,
       detail: missing.map((f) => f.caption).join(', '),
       fix: { kind: 'createUserfields', fields: [...missing] },
     });
   } else {
-    results.push({ id: 'userfields', status: 'ok', label: 'Champs de l’app' });
+    results.push({ id: 'userfields', status: 'ok', label: m.fieldsOk });
   }
 
   results.push(
     input.locations.length > 0 && input.units > 0
-      ? { id: 'meta', status: 'ok', label: 'Emplacements et unités' }
+      ? { id: 'meta', status: 'ok', label: m.metaOk }
       : {
           id: 'meta',
           status: 'warning',
-          label: 'Emplacement ou unité manquant',
-          detail: 'Impossible de créer des produits depuis l’app tant qu’il n’y en a pas dans Grocy.',
+          label: m.metaMissing,
+          detail: m.metaMissingHint,
         },
   );
 
@@ -121,13 +122,12 @@ export function evaluateCheckup(input: CheckupInput): CheckResult[] {
     const loc = input.locations.find((l) => l.id === input.newProductLocationId);
     results.push(
       loc
-        ? { id: 'newProductLocation', status: 'ok', label: `Nouveaux produits : « ${loc.name} »` }
+        ? { id: 'newProductLocation', status: 'ok', label: m.newLocOk(loc.name) }
         : {
             id: 'newProductLocation',
             status: 'warning',
-            label: 'Emplacement des nouveaux produits introuvable',
-            detail:
-              'Les nouveaux produits iront dans l’emplacement par défaut de Grocy. Choisissez-en un autre dans les Réglages.',
+            label: m.newLocGone,
+            detail: m.newLocGoneHint,
           },
     );
   }
@@ -149,16 +149,17 @@ export function pendingFixes(results: CheckResult[]): Fix[] {
 }
 
 export function describeFix(fix: Fix): string {
+  const m = t().checkup;
   switch (fix.kind) {
     case 'createList':
-      return `Créer la liste « ${DEFAULT_LIST_NAME} »`;
+      return m.fixCreateList(DEFAULT_LIST_NAME);
     case 'selectList':
-      return `Utiliser la liste « ${fix.listName} »`;
+      return m.fixSelectList(fix.listName);
     case 'createUserfields':
       return fix.fields.length === 1
-        ? `Créer le champ ${fix.fields[0].caption}`
-        : `Créer les champs ${fix.fields.map((f) => f.caption).join(', ')}`;
+        ? m.fixCreateField(fix.fields[0].caption)
+        : m.fixCreateFields(fix.fields.map((f) => f.caption).join(', '));
     case 'openSettings':
-      return 'Ouvrir les réglages';
+      return m.fixOpenSettings;
   }
 }

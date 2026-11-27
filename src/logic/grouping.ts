@@ -1,7 +1,9 @@
 import type { NamedEntity, ShoppingLine } from '../api/grocy';
+import { locale, t } from '../i18n';
 
-export const NO_GROUP = 'Sans rayon';
-export const OFF_STOCK = 'Articles hors stock';
+/** Section titles, in the current language. */
+export const noAisleTitle = () => t().grouping.noAisle;
+export const offStockTitle = () => t().grouping.offStock;
 
 export interface LineSection {
   title: string;
@@ -9,12 +11,12 @@ export interface LineSection {
 }
 
 export function lineLabel(l: ShoppingLine): string {
-  return l.product_id !== null ? (l.product_name ?? `Produit #${l.product_id}`) : l.note || '(sans texte)';
+  return l.product_id !== null ? (l.product_name ?? t().common.productN(l.product_id)) : l.note || t().grouping.noText;
 }
 
 /**
  * Groups by aisle (product group) sorted alphabetically, then "no aisle",
- * then off-stock items without aisle. Off-stock items (no product) go into their « Rayon (app) »
+ * then off-stock items without aisle. Off-stock items (no product) go into their « Aisle (app) »
  * aisle when it still exists, otherwise into that last section. Within each group:
  * unchecked first, then by name.
  */
@@ -34,13 +36,13 @@ export function groupLines(lines: ShoppingLine[], aisleNames: Map<number, string
   }
   const sortLines = (arr: ShoppingLine[]) =>
     [...arr].sort(
-      (a, b) => Number(a.done) - Number(b.done) || lineLabel(a).localeCompare(lineLabel(b), 'fr'),
+      (a, b) => Number(a.done) - Number(b.done) || lineLabel(a).localeCompare(lineLabel(b), locale()),
     );
   const sections: LineSection[] = [...groups.keys()]
-    .sort((a, b) => a.localeCompare(b, 'fr'))
+    .sort((a, b) => a.localeCompare(b, locale()))
     .map((title) => ({ title, data: sortLines(groups.get(title)!) }));
-  if (noGroup.length) sections.push({ title: NO_GROUP, data: sortLines(noGroup) });
-  if (freeText.length) sections.push({ title: OFF_STOCK, data: sortLines(freeText) });
+  if (noGroup.length) sections.push({ title: noAisleTitle(), data: sortLines(noGroup) });
+  if (freeText.length) sections.push({ title: offStockTitle(), data: sortLines(freeText) });
   return sections;
 }
 

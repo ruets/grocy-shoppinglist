@@ -1,5 +1,6 @@
 import type { GrocyClient, ShoppingLine } from '../api/grocy';
 import { lineLabel } from './grouping';
+import { t } from '../i18n';
 
 /** Checked product lines without a best-before date (they block checkout). */
 export function linesMissingBestBefore(lines: ShoppingLine[]): ShoppingLine[] {
@@ -39,7 +40,7 @@ export async function runCheckout(
     try {
       if (line.product_id !== null) {
         if (!deps.isStocked(line.id)) {
-          if (!(line.amount > 0)) throw new Error('Quantité nulle');
+          if (!(line.amount > 0)) throw new Error(t().errors.zeroQuantity);
           await deps.client.purchase(line.product_id, {
             amount: line.amount,
             price: line.paid_price,

@@ -26,8 +26,8 @@ describe('GrocyClient', () => {
       {
         status: 200,
         body: [
-          { id: 5, userfields: { appprix: 'abc', appdlc: '2026-12-03 00:00:00', apprayon: '' } },
-          { id: 4, userfields: { appprix: '1.5', appdlc: '2026-12-03', apprayon: '7' } },
+          { id: 5, userfields: { appprice: 'abc', appbestbefore: '2026-12-03 00:00:00', appaisle: '' } },
+          { id: 4, userfields: { appprice: '1.5', appbestbefore: '2026-12-03', appaisle: '7' } },
         ],
       },
     ]);
@@ -107,25 +107,25 @@ describe('GrocyClient', () => {
     await c.setLineFields(12, { paidPrice: 1.5 });
     expect(f.calls[0].url).toBe('http://g/api/userfields/shopping_list/12');
     expect(f.calls[0].init.method).toBe('PUT');
-    expect(JSON.parse(String(f.calls[0].init.body))).toEqual({ appprix: '1.5' });
+    expect(JSON.parse(String(f.calls[0].init.body))).toEqual({ appprice: '1.5' });
     await c.setLineFields(12, { paidPrice: null, bestBefore: '2026-12-03', aisleId: null });
-    expect(JSON.parse(String(f.calls[1].init.body))).toEqual({ appprix: '', appdlc: '2026-12-03', apprayon: '' });
+    expect(JSON.parse(String(f.calls[1].init.body))).toEqual({ appprice: '', appbestbefore: '2026-12-03', appaisle: '' });
   });
 
   it('createUserfield posts on shopping_list, hidden from tables', async () => {
     const f = fakeFetch([{ status: 200, body: { created_object_id: '9' } }]);
     const c = new GrocyClient('http://g', 'k', f.impl);
-    await expect(c.createUserfield({ name: 'appdlc', caption: 'DLC (app)', type: 'date' })).resolves.toBe(9);
+    await expect(c.createUserfield({ name: 'appbestbefore', caption: 'DLC (app)', type: 'date' })).resolves.toBe(9);
     expect(f.calls[0].url).toBe('http://g/api/objects/userfields');
     expect(JSON.parse(String(f.calls[0].init.body))).toEqual({
-      entity: 'shopping_list', name: 'appdlc', caption: 'DLC (app)', type: 'date', show_as_column_in_tables: 0,
+      entity: 'shopping_list', name: 'appbestbefore', caption: 'DLC (app)', type: 'date', show_as_column_in_tables: 0,
     });
   });
 
   it('getUserfields normalizes rows', async () => {
-    const f = fakeFetch([{ status: 200, body: [{ id: '3', entity: 'shopping_list', name: 'appprix', type: 'number-decimal', caption: 'x' }] }]);
+    const f = fakeFetch([{ status: 200, body: [{ id: '3', entity: 'shopping_list', name: 'appprice', type: 'number-decimal', caption: 'x' }] }]);
     const c = new GrocyClient('http://g', 'k', f.impl);
-    await expect(c.getUserfields()).resolves.toEqual([{ id: 3, entity: 'shopping_list', name: 'appprix', type: 'number-decimal' }]);
+    await expect(c.getUserfields()).resolves.toEqual([{ id: 3, entity: 'shopping_list', name: 'appprice', type: 'number-decimal' }]);
   });
 
   it('createShoppingList posts the name', async () => {

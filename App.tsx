@@ -7,6 +7,7 @@ import { ListScreen } from './src/screens/ListScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { useStore } from './src/store/useStore';
 import { useColors } from './src/theme';
+import { t } from './src/i18n';
 
 function Root() {
   const c = useColors();
@@ -25,7 +26,7 @@ function Root() {
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg, gap: 16 }}>
         <ActivityIndicator size="large" color={c.primary} />
         {phase === 'checking' ? (
-          <Text style={{ fontSize: 17, color: c.muted }}>Vérification de Grocy…</Text>
+          <Text style={{ fontSize: 17, color: c.muted }}>{t().checkup.checking}</Text>
         ) : null}
       </View>
     );

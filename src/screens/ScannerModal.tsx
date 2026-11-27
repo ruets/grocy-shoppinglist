@@ -3,6 +3,7 @@ import React from 'react';
 import { Linking, Text, Vibration, View } from 'react-native';
 import { BigButton, Field, Sheet } from '../components/ui';
 import { useColors } from '../theme';
+import { t } from '../i18n';
 
 const BARCODE_TYPES: BarcodeType[] = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128'];
 
@@ -29,19 +30,20 @@ export function ScannerModal(props: { visible: boolean; onClose: () => void; onS
     props.onScanned(code);
   };
 
+  const m = t().scanner;
   let camera: React.ReactNode;
   if (!permission) {
-    camera = <Text style={{ color: c.muted, fontSize: 16 }}>Vérification des autorisations…</Text>;
+    camera = <Text style={{ color: c.muted, fontSize: 16 }}>{m.checkingPermission}</Text>;
   } else if (!permission.granted) {
     camera = (
       <View style={{ gap: 12 }}>
         <Text style={{ color: c.text, fontSize: 16 }}>
-          L’accès à la caméra est nécessaire pour scanner. Vous pouvez aussi saisir le code à la main ci-dessous.
+          {m.cameraNeeded}
         </Text>
         {permission.canAskAgain ? (
-          <BigButton title="Autoriser la caméra" onPress={requestPermission} />
+          <BigButton title={m.allowCamera} onPress={requestPermission} />
         ) : (
-          <BigButton title="Ouvrir les réglages" variant="secondary" onPress={() => Linking.openSettings()} />
+          <BigButton title={t().common.openSettings} variant="secondary" onPress={() => Linking.openSettings()} />
         )}
       </View>
     );
@@ -74,19 +76,19 @@ export function ScannerModal(props: { visible: boolean; onClose: () => void; onS
   }
 
   return (
-    <Sheet visible={props.visible} title="Scanner un code-barres" onClose={props.onClose}>
+    <Sheet visible={props.visible} title={m.title} onClose={props.onClose}>
       {camera}
       <View style={{ marginTop: 24 }}>
         <Field
-          label="Saisie manuelle du code"
+          label={m.manualLabel}
           value={manual}
           onChangeText={setManual}
           keyboardType="number-pad"
-          placeholder="ex. 3017620422003"
+          placeholder={m.manualPlaceholder}
           returnKeyType="search"
           onSubmitEditing={() => handle(manual)}
         />
-        <BigButton title="Rechercher ce code" variant="secondary" disabled={!manual.trim()} onPress={() => handle(manual)} />
+        <BigButton title={m.search} variant="secondary" disabled={!manual.trim()} onPress={() => handle(manual)} />
       </View>
     </Sheet>
   );

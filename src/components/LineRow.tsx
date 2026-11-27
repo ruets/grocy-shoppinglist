@@ -5,6 +5,7 @@ import { lineLabel } from '../logic/grouping';
 import { formatAmount } from '../logic/numbers';
 import { linePrice } from '../logic/totals';
 import { sizes, useColors } from '../theme';
+import { t } from '../i18n';
 
 export const LineRow = React.memo(function LineRow(props: {
   line: ShoppingLine;
@@ -24,7 +25,7 @@ export const LineRow = React.memo(function LineRow(props: {
     lastPrice: line.last_price,
     paidUnitPrice: props.paidUnitPrice,
   });
-  const priceText = price.value === null ? 'sans prix' : `${price.estimated ? '~' : ''}${props.money(price.value)}`;
+  const priceText = price.value === null ? t().common.noPrice : `${price.estimated ? '~' : ''}${props.money(price.value)}`;
 
   return (
     <View
@@ -43,7 +44,7 @@ export const LineRow = React.memo(function LineRow(props: {
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: line.done }}
-        accessibilityLabel={line.done ? 'Modifier l’achat' : 'Mettre dans le panier'}
+        accessibilityLabel={line.done ? t().line.editPurchase : t().line.putInCart}
         onPress={() => props.onCheck(line)}
         style={({ pressed }) => ({
           width: 68,
@@ -92,7 +93,7 @@ export const LineRow = React.memo(function LineRow(props: {
         <Text style={{ color: c.muted, fontSize: 15, marginTop: 2 }} numberOfLines={2}>
           {free
             ? line.amount !== 1
-              ? `${formatAmount(line.amount)} unités`
+              ? t().common.amountUnits(formatAmount(line.amount))
               : ''
             : `${formatAmount(line.amount)} ${props.unitName}`}
           {!free && line.note ? ` · ${line.note}` : ''}

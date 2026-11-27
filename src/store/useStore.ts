@@ -21,6 +21,7 @@ import {
 } from '../logic/checkup';
 import { makeMoneyFormatter } from '../logic/numbers';
 import { priceLineFrom } from '../logic/priceLine';
+import { locale, t } from '../i18n';
 import { loadSettings, saveSettings, type AppSettings } from '../storage/settings';
 import {
   clearLegacyLineData,
@@ -98,7 +99,7 @@ interface State {
   loadAll: () => Promise<void>;
   reloadProducts: () => Promise<void>;
   refreshLines: (opts?: { silent?: boolean; pull?: boolean }) => Promise<void>;
-  /** Off-stock item = productId null; note is its name, aisleId its « Rayon (app) ». */
+  /** Off-stock item = productId null; note is its name, aisleId its « Aisle (app) ». */
   addItem: (p: ItemInput) => Promise<void>;
   updateItem: (id: number, p: ItemInput) => Promise<void>;
   deleteItem: (id: number) => Promise<void>;
@@ -167,13 +168,13 @@ export const useStore = create<State>((set, get) => {
 
   function requireClient(): GrocyClient {
     const c = get().client;
-    if (!c) throw new Error('Grocy non configuré');
+    if (!c) throw new Error(t().errors.notConfigured);
     return c;
   }
 
   function requireList(): number {
     const id = get().settings.shoppingListId;
-    if (id === null) throw new Error('Aucune liste de courses choisie');
+    if (id === null) throw new Error(t().errors.noListChosen);
     return id;
   }
 
@@ -295,7 +296,7 @@ export const useStore = create<State>((set, get) => {
             productsById: new Map(products.map((p) => [p.id, p])),
             units,
             unitsById: new Map(units.map((u) => [u.id, u])),
-            shoppingLocations: [...shoppingLocations].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+            shoppingLocations: [...shoppingLocations].sort((a, b) => a.name.localeCompare(b.name, locale())),
             locations,
             productGroups,
             userSettings,
@@ -413,7 +414,7 @@ export const useStore = create<State>((set, get) => {
       mutate(async () => {
         const client = requireClient();
         const src = get().lines.find((l) => l.id === lineId);
-        if (!src) throw new Error('Article introuvable');
+        if (!src) throw new Error(t().errors.itemNotFound);
         const { line, fields } = priceLineFrom(src, p);
         const id = await client.addShoppingLine(line);
         await client.setLineFields(id, fields);
@@ -425,7 +426,7 @@ export const useStore = create<State>((set, get) => {
       mutate(async () => {
         const client = requireClient();
         const meta = get().meta;
-        if (!meta) throw new Error('Données Grocy non chargées');
+        if (!meta) throw new Error(t().errors.dataNotLoaded);
         const { locationId, quId } = productPresets(
           meta.userSettings,
           meta.locations,
@@ -433,7 +434,7 @@ export const useStore = create<State>((set, get) => {
           get().settings.newProductLocationId,
         );
         if (locationId === null || quId === null) {
-          throw new Error('Impossible de créer le produit : aucun emplacement ou unité dans Grocy.');
+          throw new Error(t().errors.cannotCreateProduct);
         }
         const id = await client.createProduct({ name: name.trim(), locationId, quId });
         if (barcode) await client.addBarcode(id, barcode);

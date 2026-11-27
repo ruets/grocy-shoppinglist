@@ -1,5 +1,6 @@
 import type { NamedEntity, Product } from '../api/grocy';
-import { NO_GROUP } from './grouping';
+import { locale } from '../i18n';
+import { noAisleTitle } from './grouping';
 import { searchByName } from './text';
 
 export interface PickerSection {
@@ -25,10 +26,10 @@ export function pickerSections(products: Product[], query: string, groups: Named
     if (name) byAisle.set(name, [...(byAisle.get(name) ?? []), p]);
     else none.push(p);
   }
-  const byName = (a: Product, b: Product) => a.name.localeCompare(b.name, 'fr');
+  const byName = (a: Product, b: Product) => a.name.localeCompare(b.name, locale());
   const sections: PickerSection[] = [...byAisle.keys()]
-    .sort((a, b) => a.localeCompare(b, 'fr'))
+    .sort((a, b) => a.localeCompare(b, locale()))
     .map((title) => ({ title, data: byAisle.get(title)!.sort(byName) }));
-  if (none.length) sections.push({ title: NO_GROUP, data: none.sort(byName) });
+  if (none.length) sections.push({ title: noAisleTitle(), data: none.sort(byName) });
   return sections;
 }

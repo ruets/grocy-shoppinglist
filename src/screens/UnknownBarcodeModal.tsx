@@ -4,6 +4,7 @@ import { ProductPicker } from '../components/ProductPicker';
 import { BigButton, SectionLabel, Sheet } from '../components/ui';
 import { useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
+import { locale, t } from '../i18n';
 
 /**
  * Barcode unknown to Grocy: associate it with an existing product
@@ -29,10 +30,10 @@ export function UnknownBarcodeModal(props: {
     const seen = new Map<number, string>();
     for (const l of lines) {
       if (!l.done && l.product_id !== null && !seen.has(l.product_id)) {
-        seen.set(l.product_id, l.product_name ?? `Produit #${l.product_id}`);
+        seen.set(l.product_id, l.product_name ?? t().common.productN(l.product_id));
       }
     }
-    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'));
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], locale()));
   }, [lines]);
 
   const associate = async () => {
@@ -52,11 +53,11 @@ export function UnknownBarcodeModal(props: {
   return (
     <Sheet
       visible={props.barcode !== null}
-      title="Code inconnu"
+      title={t().unknownBarcode.title}
       onClose={props.onClose}
       footer={
         <BigButton
-          title="Associer le code et continuer"
+          title={t().unknownBarcode.associate}
           onPress={associate}
           loading={saving}
           disabled={productId === null}
@@ -64,13 +65,12 @@ export function UnknownBarcodeModal(props: {
       }
     >
       <Text style={{ color: c.muted, fontSize: 16, marginBottom: 16 }}>
-        Le code {props.barcode} n’est rattaché à aucun produit Grocy. Choisissez le produit correspondant (le code y
-        sera ajouté) ou créez-en un nouveau.
+        {t().unknownBarcode.explain(props.barcode ?? '')}
       </Text>
 
       {productId === null && suggestions.length > 0 ? (
         <View style={{ marginBottom: 18 }}>
-          <SectionLabel>Sur la liste</SectionLabel>
+          <SectionLabel>{t().unknownBarcode.onList}</SectionLabel>
           {suggestions.map(([id, name]) => (
             <Pressable
               key={id}
