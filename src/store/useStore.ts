@@ -130,6 +130,13 @@ export const useStore = create<State>((set, get) => {
     set({ lines: get().lines.map((l) => (l.id === lineId ? { ...l, ...patch } : l)) });
   }
 
+  async function clearStocked(lineId: number) {
+    const map = { ...get().stocked };
+    delete map[lineId];
+    set({ stocked: map });
+    await saveStocked(map);
+  }
+
   async function markStocked(lineId: number) {
     const map = { ...get().stocked, [lineId]: Date.now() };
     set({ stocked: map });
@@ -438,6 +445,7 @@ export const useStore = create<State>((set, get) => {
           client: requireClient(),
           isStocked: (id) => id in get().stocked,
           markStocked,
+          clearStocked,
           onProgress,
         });
         await get().refreshLines({ silent: true });

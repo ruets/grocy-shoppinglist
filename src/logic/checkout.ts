@@ -16,6 +16,8 @@ export interface CheckoutDeps {
   /** Line already added to stock by this phone (deletion failed afterwards). */
   isStocked: (lineId: number) => boolean;
   markStocked: (lineId: number) => Promise<void>;
+  /** Called once the line is deleted: its id may be reused by Grocy later. */
+  clearStocked: (lineId: number) => Promise<void>;
   onProgress?: (done: number, total: number) => void;
 }
 
@@ -48,6 +50,7 @@ export async function runCheckout(
         }
       }
       await deps.client.deleteShoppingLine(line.id);
+      if (line.product_id !== null) await deps.clearStocked(line.id).catch(() => undefined);
       result.ok.push({ id: line.id, label });
     } catch (e: any) {
       result.errors.push({ id: line.id, label, message: e?.message ?? String(e) });

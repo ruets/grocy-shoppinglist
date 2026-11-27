@@ -159,6 +159,7 @@ async function main() {
     markStocked: async (id) => {
       stocked.add(id);
     },
+    clearStocked: async () => {}, // keep markers: step 7 re-runs on the same lines
   });
   check(result.errors.length === 0, `checkout without errors ${result.errors.map((e) => e.message).join(' | ')}`);
   check(stocked.has(lineId) && stocked.has(lineId2), 'stocked markers set');
@@ -182,6 +183,7 @@ async function main() {
     client,
     isStocked: (id) => stocked.has(id),
     markStocked: async () => {},
+    clearStocked: async () => {},
   });
   const entriesFinal = await client.getStockEntries(productId);
   check(entriesFinal.length === entriesAfter.length, 'no double stock entry');

@@ -31,6 +31,9 @@ function setup(failDeleteIds: number[] = []) {
     markStocked: async (id: number) => {
       stocked.add(id);
     },
+    clearStocked: async (id: number) => {
+      stocked.delete(id);
+    },
   };
   return { purchase, deleteShoppingLine, stocked, deps };
 }
@@ -57,6 +60,18 @@ describe('runCheckout', () => {
     expect(deleteShoppingLine.mock.calls.map((c) => c[0])).toEqual([1, 2]);
     expect(r.ok).toHaveLength(2);
     expect(r.errors).toHaveLength(0);
+  });
+
+  it('forgets the stocked marker once the line is deleted (Grocy may reuse the id)', async () => {
+    const { deps, stocked } = setup();
+    await runCheckout([line({ id: 1, product_id: 10 })], null, deps);
+    expect(stocked.has(1)).toBe(false);
+  });
+
+  it('keeps the stocked marker when the deletion fails', async () => {
+    const { deps, stocked } = setup([1]);
+    await runCheckout([line({ id: 1, product_id: 10 })], null, deps);
+    expect(stocked.has(1)).toBe(true);
   });
 
   it('two lines of the same product → two stock entries with their own price', async () => {
