@@ -5,6 +5,7 @@ import { ProductPicker } from '../components/ProductPicker';
 import { BigButton, Chip, Field, SectionLabel, Sheet, Stepper } from '../components/ui';
 import { stockUnitName, useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
+import { locale, t } from '../i18n';
 
 /** Off-stock item: exists only on the list (free-text line), never in Grocy's stock. */
 interface OffStock {
@@ -55,10 +56,10 @@ export function ItemEditorModal(props: { visible: boolean; line: ShoppingLine | 
 
   const remove = () => {
     if (!props.line) return;
-    Alert.alert('Supprimer l’article ?', 'La ligne sera retirée de la liste Grocy.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t().editor.deleteTitle, t().editor.deleteMessage, [
+      { text: t().common.cancel, style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t().common.delete,
         style: 'destructive',
         onPress: async () => {
           try {
@@ -72,23 +73,23 @@ export function ItemEditorModal(props: { visible: boolean; line: ShoppingLine | 
     ]);
   };
 
-  const groups = [...(meta?.productGroups ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  const groups = [...(meta?.productGroups ?? [])].sort((a, b) => a.name.localeCompare(b.name, locale()));
   const showQuantity = offStock !== null || productId !== null;
 
   return (
     <Sheet
       visible={props.visible}
-      title={props.line ? 'Modifier l’article' : 'Ajouter un article'}
+      title={props.line ? t().editor.editTitle : t().editor.addTitle}
       onClose={props.onClose}
       footer={
         <>
           <BigButton
-            title={props.line ? 'Enregistrer' : 'Ajouter à la liste'}
+            title={props.line ? t().common.save : t().editor.addToList}
             onPress={save}
             loading={saving}
             disabled={!canSave}
           />
-          {props.line ? <BigButton title="Supprimer" variant="danger" onPress={remove} /> : null}
+          {props.line ? <BigButton title={t().common.delete} variant="danger" onPress={remove} /> : null}
         </>
       }
     >
@@ -96,10 +97,10 @@ export function ItemEditorModal(props: { visible: boolean; line: ShoppingLine | 
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: c.warn }}>
-              Hors stock : n’entre pas dans le stock Grocy
+              {t().editor.offStockBanner}
             </Text>
             <BigButton
-              title="Produit Grocy"
+              title={t().editor.grocyProduct}
               variant="ghost"
               compact
               onPress={() => {
@@ -109,15 +110,15 @@ export function ItemEditorModal(props: { visible: boolean; line: ShoppingLine | 
             />
           </View>
           <Field
-            label="Nom"
-            placeholder="ex. « Bonbons »"
+            label={t().editor.name}
+            placeholder={t().editor.namePlaceholder}
             value={offStock.name}
             onChangeText={(t) => setOffStock({ ...offStock, name: t.replace(/\n/g, ' ') })}
           />
-          <SectionLabel>Rayon</SectionLabel>
+          <SectionLabel>{t().editor.aisle}</SectionLabel>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: sizes.pad }}>
             <Chip
-              label="Aucun"
+              label={t().editor.noAisle}
               selected={offStock.aisleId === null}
               onPress={() => setOffStock({ ...offStock, aisleId: null })}
             />
@@ -140,17 +141,17 @@ export function ItemEditorModal(props: { visible: boolean; line: ShoppingLine | 
       )}
       {showQuantity ? (
         <>
-          <SectionLabel>Quantité</SectionLabel>
+          <SectionLabel>{t().common.quantity}</SectionLabel>
           <Stepper
             value={amount}
             onChange={setAmount}
             min={0}
-            unit={offStock ? (amount > 1 ? 'unités' : 'unité') : stockUnitName(meta, productId, amount)}
+            unit={offStock ? t().common.units(amount) : stockUnitName(meta, productId, amount)}
           />
         </>
       ) : null}
       {!offStock && productId !== null ? (
-        <Field label="Note" placeholder="Optionnel" value={note} onChangeText={setNote} multiline />
+        <Field label={t().editor.note} placeholder={t().editor.optional} value={note} onChangeText={setNote} multiline />
       ) : null}
     </Sheet>
   );

@@ -1,16 +1,11 @@
 import React from 'react';
 import { TextInput, View } from 'react-native';
-import { addDays, formatBestBefore, NEVER_EXPIRES, parseUserDate, productDefaultBestBefore } from '../logic/dates';
+import { addDays, formatBestBefore, NEVER_EXPIRES, parseBestBeforeText, productDefaultBestBefore } from '../logic/dates';
 import { useStore } from '../store/useStore';
 import { Chip, Field } from './ui';
+import { t } from '../i18n';
 
-/** Typed text → ISO date (or « jamais »). null if empty, 'invalid' if unreadable. */
-export function parseBestBeforeText(text: string): string | null | 'invalid' {
-  const t = text.trim();
-  if (!t) return null;
-  if (t.toLowerCase() === 'jamais') return NEVER_EXPIRES;
-  return parseUserDate(t) ?? 'invalid';
-}
+export { parseBestBeforeText };
 
 /** ISO value → field text. */
 export function bestBeforeToText(iso: string | null | undefined): string {
@@ -37,18 +32,19 @@ export function BestBeforeInput(props: {
   const product = props.productId !== null ? meta?.productsById.get(props.productId) : undefined;
   const productDefault = productDefaultBestBefore(product?.default_best_before_days);
 
+  const m = t().dateInput;
   const chips: [string, string | null][] = [];
-  if (props.allowEmpty) chips.push(['Plus tard', null]);
-  chips.push(['Ne périme pas', NEVER_EXPIRES]);
+  if (props.allowEmpty) chips.push([m.later, null]);
+  chips.push([m.neverExpires, NEVER_EXPIRES]);
   if (productDefault && productDefault !== NEVER_EXPIRES) {
-    chips.push([`Défaut produit (+${product?.default_best_before_days} j)`, productDefault]);
+    chips.push([m.productDefault(product?.default_best_before_days ?? 0), productDefault]);
   }
-  chips.push(['+3 j', addDays(3)], ['+1 sem.', addDays(7)], ['+1 mois', addDays(30)]);
+  chips.push([m.plus3Days, addDays(3)], [m.plus1Week, addDays(7)], [m.plus1Month, addDays(30)]);
 
   React.useEffect(() => {
     if (props.autoFocus) {
-      const t = setTimeout(() => inputRef.current?.focus(), 350);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => inputRef.current?.focus(), 350);
+      return () => clearTimeout(timer);
     }
   }, [props.autoFocus, props.productId]);
 
@@ -56,20 +52,20 @@ export function BestBeforeInput(props: {
     <View>
       <Field
         ref={inputRef}
-        label={props.label ?? 'Date de péremption'}
+        label={props.label ?? m.label}
         value={props.text}
         onChangeText={props.onChangeText}
-        placeholder={props.placeholder ?? 'JJMM ou JJ/MM/AAAA'}
+        placeholder={props.placeholder ?? m.placeholder}
         keyboardType="numbers-and-punctuation"
         returnKeyType={props.onSubmit ? 'next' : 'done'}
         onSubmitEditing={props.onSubmit}
         submitBehavior={props.onSubmit ? 'submit' : 'blurAndSubmit'}
         hint={
           parsed === 'invalid'
-            ? 'Date invalide'
+            ? m.invalid
             : parsed
               ? `→ ${formatBestBefore(parsed)}`
-              : 'Saisie rapide : 1203 = 12/03, 120327 = 12/03/2027'
+              : m.quickHint
         }
       />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

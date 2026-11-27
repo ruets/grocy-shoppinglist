@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatBucket, type Totals } from '../logic/totals';
 import { useColors } from '../theme';
+import { t } from '../i18n';
 
 export function TotalsHeader(props: {
   totals: Totals;
@@ -27,7 +28,8 @@ export function TotalsHeader(props: {
       {sub ? <Text style={{ color: c.headerText, opacity: 0.7, fontSize: 12 }}>{sub}</Text> : null}
     </View>
   );
-  const noPrice = (n: number) => (n > 0 ? `${n} sans prix` : null);
+  const m = t();
+  const noPrice = (n: number) => (n > 0 ? m.common.countNoPrice(n) : null);
   return (
     <View style={{ backgroundColor: c.header, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -37,7 +39,7 @@ export function TotalsHeader(props: {
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Réglages"
+          accessibilityLabel={m.common.settings}
           onPress={props.onSettings}
           hitSlop={10}
           style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}
@@ -46,13 +48,13 @@ export function TotalsHeader(props: {
         </Pressable>
       </View>
       <View style={{ flexDirection: 'row' }}>
-        {cell(`Panier (${cart.count})`, formatBucket(cart, props.money), noPrice(cart.withoutPrice), true)}
+        {cell(m.totals.cart(cart.count), formatBucket(cart, props.money), noPrice(cart.withoutPrice), true)}
         {cell(
-          `Reste (${remaining.count})`,
+          m.totals.remaining(remaining.count),
           formatBucket(remaining, props.money),
           noPrice(remaining.withoutPrice),
         )}
-        {cell('Liste', formatBucket(list, props.money), noPrice(list.withoutPrice))}
+        {cell(m.totals.list, formatBucket(list, props.money), noPrice(list.withoutPrice))}
       </View>
     </View>
   );

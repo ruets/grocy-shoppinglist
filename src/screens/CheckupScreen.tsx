@@ -6,6 +6,7 @@ import { ToastHost } from '../components/ToastHost';
 import { describeFix, isBlocking, pendingFixes, type CheckStatus } from '../logic/checkup';
 import { useStore } from '../store/useStore';
 import { sizes, useColors, type Colors } from '../theme';
+import { t } from '../i18n';
 
 const ICON: Record<CheckStatus, string> = { ok: '✓', warning: '⚠', missing: '✕', error: '✕' };
 
@@ -62,17 +63,17 @@ export function CheckupScreen(props: { blocking: boolean; onClose: () => void; o
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView contentContainerStyle={{ padding: sizes.pad }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={{ flex: 1, fontSize: 28, fontWeight: '800', color: c.text }}>Vérification de Grocy</Text>
-          {!props.blocking ? <BigButton title="Fermer" variant="ghost" compact onPress={props.onClose} /> : null}
+          <Text style={{ flex: 1, fontSize: 28, fontWeight: '800', color: c.text }}>{t().checkup.title}</Text>
+          {!props.blocking ? <BigButton title={t().common.close} variant="ghost" compact onPress={props.onClose} /> : null}
         </View>
         {props.blocking ? (
           <Text style={{ fontSize: 16, color: c.muted, marginBottom: 16 }}>
-            L’app a besoin de quelques éléments dans Grocy avant d’afficher la liste.
+            {t().checkupScreen.intro}
           </Text>
         ) : null}
 
         {results === null ? (
-          <Text style={{ color: c.muted, fontSize: 16 }}>Vérification…</Text>
+          <Text style={{ color: c.muted, fontSize: 16 }}>{t().checkupScreen.checking}</Text>
         ) : (
           results.map((r) => (
             <View
@@ -108,7 +109,7 @@ export function CheckupScreen(props: { blocking: boolean; onClose: () => void; o
             }}
           >
             <Text style={{ fontSize: sizes.font, fontWeight: '800', color: c.text, marginBottom: 6 }}>
-              Ce qui sera fait
+              {t().checkupScreen.willDo}
             </Text>
             {fixes.map((f, i) => (
               <Text key={i} style={{ fontSize: 16, color: c.text, marginBottom: 2 }}>
@@ -116,19 +117,19 @@ export function CheckupScreen(props: { blocking: boolean; onClose: () => void; o
               </Text>
             ))}
             <Text style={{ fontSize: 14, color: c.muted, marginTop: 6 }}>
-              Rien n’est modifié ni supprimé dans Grocy : l’app ne fait qu’ajouter.
+              {t().checkupScreen.onlyAdds}
             </Text>
-            <BigButton title="Réparer" loading={busy === 'fix'} onPress={repair} style={{ marginTop: 12 }} />
+            <BigButton title={t().checkupScreen.repair} loading={busy === 'fix'} onPress={repair} style={{ marginTop: 12 }} />
           </View>
         ) : null}
 
         <View style={{ gap: 10, marginTop: 20 }}>
-          <BigButton title="Relancer" variant="secondary" loading={busy === 'check'} onPress={recheck} />
+          <BigButton title={t().checkupScreen.rerun} variant="secondary" loading={busy === 'check'} onPress={recheck} />
           {props.blocking && results && !blocked ? (
-            <BigButton title="Continuer" onPress={recheck} />
+            <BigButton title={t().checkupScreen.continue} onPress={recheck} />
           ) : null}
           {props.blocking || serverDown ? (
-            <BigButton title="Réglages" variant="ghost" onPress={props.onOpenSettings} />
+            <BigButton title={t().common.settings} variant="ghost" onPress={props.onOpenSettings} />
           ) : null}
         </View>
       </ScrollView>

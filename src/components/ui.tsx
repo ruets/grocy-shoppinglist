@@ -17,6 +17,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { sizes, useColors } from '../theme';
 import { formatInput, parseDecimal, round2 } from '../logic/numbers';
 import { ToastHost } from './ToastHost';
+import { t } from '../i18n';
 
 // ---------- Button ----------
 
@@ -113,7 +114,7 @@ export function Stepper(props: { value: number; onChange: (v: number) => void; s
   const btn = (label: string, delta: number) => (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={delta > 0 ? 'Augmenter' : 'Diminuer'}
+      accessibilityLabel={delta > 0 ? t().common.increase : t().common.decrease}
       onPress={() => props.onChange(Math.max(min, round2(props.value + delta)))}
       style={({ pressed }) => [
         styles.stepBtn,
@@ -205,7 +206,7 @@ export function Sheet(props: {
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Fermer"
+              accessibilityLabel={t().common.close}
               onPress={props.onClose}
               hitSlop={12}
               style={({ pressed }) => [styles.close, { backgroundColor: c.card, opacity: pressed ? 0.6 : 1 }]}

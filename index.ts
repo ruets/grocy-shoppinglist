@@ -1,5 +1,8 @@
 import { registerRootComponent } from 'expo';
 
+// Before the app: chooses the UI language.
+import './src/i18n/device';
+
 import App from './App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

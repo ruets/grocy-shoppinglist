@@ -4,6 +4,8 @@
  * as well as from the Node integration script (scripts/api-integration-test.ts).
  */
 
+import { t } from '../i18n';
+
 export interface ShoppingList {
   id: number;
   name: string;
@@ -228,13 +230,9 @@ export class GrocyClient {
       });
     } catch (e: any) {
       if (e?.name === 'AbortError') {
-        throw new GrocyError('Grocy ne répond pas (délai dépassé). Vérifiez le réseau / VPN.', null, 'timeout');
+        throw new GrocyError(t().errors.timeout, null, 'timeout');
       }
-      throw new GrocyError(
-        "Impossible de joindre Grocy. Vérifiez l'URL et la connexion (Wi-Fi / VPN).",
-        null,
-        'network',
-      );
+      throw new GrocyError(t().errors.network, null, 'network');
     } finally {
       clearTimeout(timer);
     }
@@ -251,7 +249,7 @@ export class GrocyClient {
 
     if (!res.ok) {
       if (res.status === 401) {
-        throw new GrocyError('Clé API refusée par Grocy (401).', 401, 'auth');
+        throw new GrocyError(t().errors.auth, 401, 'auth');
       }
       const msg =
         (data && typeof data === 'object' && data.error_message) ||
@@ -423,7 +421,7 @@ export class GrocyClient {
       return toInt(res.created_object_id);
     } catch (e) {
       if (e instanceof GrocyError && /UNIQUE constraint failed: product_barcodes\.barcode/i.test(e.message)) {
-        throw new GrocyError(`Le code ${barcode} est déjà associé à un autre produit dans Grocy.`, e.status);
+        throw new GrocyError(t().errors.barcodeTaken(barcode), e.status);
       }
       throw e;
     }
