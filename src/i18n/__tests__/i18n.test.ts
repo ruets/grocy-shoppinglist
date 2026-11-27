@@ -5,12 +5,13 @@ const L = (...tags: string[]) => tags.map((tag) => ({ languageTag: tag, language
 describe('pickLanguage', () => {
   it('first supported language in preference order', () => {
     expect(pickLanguage(L('de-DE', 'en-GB', 'fr-FR'))).toBe('en');
+    expect(pickLanguage(L('de-DE', 'fr-FR', 'en-GB'))).toBe('fr');
     expect(pickLanguage(L('fr-CA'))).toBe('fr');
   });
-  it('nothing supported → French', () => {
-    expect(pickLanguage(L('ja-JP'))).toBe('fr');
-    expect(pickLanguage([])).toBe('fr');
-    expect(pickLanguage([{ languageTag: 'und', languageCode: null }])).toBe('fr');
+  it('nothing supported → English', () => {
+    expect(pickLanguage(L('ja-JP'))).toBe('en');
+    expect(pickLanguage([])).toBe('en');
+    expect(pickLanguage([{ languageTag: 'und', languageCode: null }])).toBe('en');
   });
 });
 

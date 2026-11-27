@@ -40,9 +40,9 @@
 
 ### 1. Userfields on shopping-list lines
 - Entity `shopping_list`, not shown as table columns:
-  - `appprix` — « Prix payé (app) », `number-decimal`: price paid per stock unit.
-  - `appdlc` — « DLC (app) », `date`: best-before date (`2999-12-31` = never expires).
-  - `apprayon` — « Rayon (app) », `number-integral`: product group id, for off-stock items (used from delivery 2; created now so the checkup is complete).
+  - `appprix` — « Price paid (app) », `number-decimal`: price paid per stock unit.
+  - `appdlc` — « Best before (app) », `date`: best-before date (`2999-12-31` = never expires).
+  - `apprayon` — « Aisle (app) », `number-integral`: product group id, for off-stock items (used from delivery 2; created now so the checkup is complete).
 - The `note` stays a plain note (user note for a product, item name for free text).
 - Checked state stays Grocy's `done`.
 - Tolerance: an empty or non-parsable value is read as "not set".
@@ -59,16 +59,16 @@
 - One list of checks, each `ok | missing | error`, with a short French label and, when it fails, what to do:
   1. Server reachable and API key valid (`GET /system/info`) — not fixable by the app → go to Settings.
   2. Grocy version ≥ 4.0 — warning only.
-  3. The selected shopping list exists (at least one list) — fixable: create « Liste de courses ».
+  3. The selected shopping list exists (at least one list) — fixable: create « Shopping list ».
   4. Userfields `appprix`, `appdlc`, `apprayon` exist on `shopping_list` — fixable: create them.
   5. A field with the app's name but the wrong type — error, not fixable (would lose data): explain to fix or delete it in Grocy.
   6. At least one location and one quantity unit (needed to create products) — warning, not fixed by the app.
-- **Startup:** before the list screen, a short « Vérification de Grocy… » step runs the checks. All ok (warnings allowed) → list. Otherwise the « Vérification de Grocy » screen opens; **nothing is changed without asking**: it lists exactly what it would do (« Créer les champs Prix payé (app), DLC (app) », « Créer la liste « Liste de courses » », « Utiliser la liste « X » ») and waits for « Réparer ». Until then the list is not shown (the app cannot save without the fields); « Réglages » stays available.
+- **Startup:** before the list screen, a short « Vérification de Grocy… » step runs the checks. All ok (warnings allowed) → list. Otherwise the « Vérification de Grocy » screen opens; **nothing is changed without asking**: it lists exactly what it would do (« Créer les champs Price paid (app), Best before (app) », « Créer la liste « Shopping list » », « Utiliser la liste « X » ») and waits for « Réparer ». Until then the list is not shown (the app cannot save without the fields); « Réglages » stays available.
 - **On demand:** the « Grocy Doctor » button in Settings opens the same screen, which shows every check with its status, « Réparer » (same confirmation) and « Relancer ».
 - The Doctor only **adds** (or selects an existing list, after asking); it never edits or deletes anything in Grocy.
 
 ### 4. Off-stock items (delivery 2)
-- Off-stock item = free-text line (name in the note) with optional « Rayon (app) », grouped under its aisle (or « Articles hors stock » without one). « ＋ Autre prix » works for it too (same name and aisle, no date), and it shows « sans prix » like a product when it has no price.
+- Off-stock item = free-text line (name in the note) with optional « Aisle (app) », grouped under its aisle (or « Articles hors stock » without one). « ＋ Autre prix » works for it too (same name and aisle, no date), and it shows « sans prix » like a product when it has no price.
 - Price and quantity as for products; counted in the totals.
 - At checkout its line is deleted, no stock. Nothing is kept afterwards.
 
@@ -83,9 +83,9 @@
 - Used for every product the app creates. Unset → current behaviour (Grocy preset).
 
 ### 7. Internationalisation (delivery 4)
-- All UI strings in translation files, French + English; follows the phone language, French fallback.
+- All UI strings in translation files, French + English; follows the phone language, English fallback.
 - Number, price and date formats follow the language; date input keeps the current shortcuts.
-- Userfield captions stored in Grocy are fixed whatever the language.
+- What the app creates in Grocy (userfield captions, default list « Shopping list ») is in English whatever the language.
 
 ## Unchanged
 Scanning, unknown barcode → associate/create, guided dates at checkout, 20 s auto refresh, Expo Go only, no new native dependency.

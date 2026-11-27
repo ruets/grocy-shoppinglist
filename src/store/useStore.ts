@@ -99,7 +99,7 @@ interface State {
   loadAll: () => Promise<void>;
   reloadProducts: () => Promise<void>;
   refreshLines: (opts?: { silent?: boolean; pull?: boolean }) => Promise<void>;
-  /** Off-stock item = productId null; note is its name, aisleId its « Rayon (app) ». */
+  /** Off-stock item = productId null; note is its name, aisleId its « Aisle (app) ». */
   addItem: (p: ItemInput) => Promise<void>;
   updateItem: (id: number, p: ItemInput) => Promise<void>;
   deleteItem: (id: number) => Promise<void>;

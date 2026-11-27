@@ -59,11 +59,11 @@ export interface ShoppingLine {
   /** Last purchase price per stock unit (null if unknown). */
   last_price: number | null;
   product_group_name: string | null;
-  /** « Prix payé (app) » userfield: price paid per stock unit. */
+  /** « Price paid (app) » userfield: price paid per stock unit. */
   paid_price: number | null;
-  /** « DLC (app) » userfield, YYYY-MM-DD. */
+  /** « Best before (app) » userfield, YYYY-MM-DD. */
   best_before: string | null;
-  /** « Rayon (app) » userfield: product group id (off-stock items). */
+  /** « Aisle (app) » userfield: product group id (off-stock items). */
   aisle_id: number | null;
 }
 

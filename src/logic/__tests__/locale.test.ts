@@ -44,9 +44,9 @@ describe('logic texts in English', () => {
   afterEach(() => setLanguage('fr'));
 
   it('checkup labels and fixes', () => {
-    expect(describeFix({ kind: 'createList' })).toBe('Create the list "Liste de courses"');
+    expect(describeFix({ kind: 'createList' })).toBe('Create the list "Shopping list"');
     expect(describeFix({ kind: 'createUserfields', fields: APP_USERFIELDS.slice(0, 1) })).toBe(
-      'Create the field Prix payé (app)',
+      'Create the field Price paid (app)',
     );
     const r = evaluateCheckup({
       server: { ok: false, error: new GrocyError('x', 401, 'auth') },

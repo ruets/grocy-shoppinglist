@@ -12,12 +12,12 @@ export interface LocaleLike {
 const MESSAGES: Record<Lang, Messages> = { fr, en };
 const DEFAULT_TAG: Record<Lang, string> = { fr: 'fr-FR', en: 'en-US' };
 
-/** First of the phone's preferred languages the app speaks; French otherwise. */
+/** First of the phone's preferred languages the app speaks; English otherwise. */
 export function pickLanguage(locales: LocaleLike[]): Lang {
   for (const l of locales) {
     if (l.languageCode === 'fr' || l.languageCode === 'en') return l.languageCode;
   }
-  return 'fr';
+  return 'en';
 }
 
 /** BCP-47 tag for Intl: the phone's own variant of that language (e.g. en-GB) when it has one. */
@@ -25,7 +25,7 @@ export function localeFor(language: Lang, locales: LocaleLike[]): string {
   return locales.find((l) => l.languageCode === language)?.languageTag ?? DEFAULT_TAG[language];
 }
 
-let current: { lang: Lang; tag: string } = { lang: 'fr', tag: DEFAULT_TAG.fr };
+let current: { lang: Lang; tag: string } = { lang: 'en', tag: DEFAULT_TAG.en };
 
 export function setLanguage(language: Lang, tag: string = DEFAULT_TAG[language]): void {
   current = { lang: language, tag };

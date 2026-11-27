@@ -16,7 +16,7 @@ export function lineLabel(l: ShoppingLine): string {
 
 /**
  * Groups by aisle (product group) sorted alphabetically, then "no aisle",
- * then off-stock items without aisle. Off-stock items (no product) go into their « Rayon (app) »
+ * then off-stock items without aisle. Off-stock items (no product) go into their « Aisle (app) »
  * aisle when it still exists, otherwise into that last section. Within each group:
  * unchecked first, then by name.
  */

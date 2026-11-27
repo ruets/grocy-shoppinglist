@@ -130,13 +130,13 @@ describe('evaluateCheckup', () => {
 
 describe('describeFix', () => {
   it('describes each fix in French', () => {
-    expect(describeFix({ kind: 'createList' })).toBe('Créer la liste « Liste de courses »');
+    expect(describeFix({ kind: 'createList' })).toBe('Créer la liste « Shopping list »');
     expect(describeFix({ kind: 'selectList', listId: 4, listName: 'A' })).toBe('Utiliser la liste « A »');
     expect(describeFix({ kind: 'createUserfields', fields: APP_USERFIELDS.slice(0, 2) })).toBe(
-      'Créer les champs Prix payé (app), DLC (app)',
+      'Créer les champs Price paid (app), Best before (app)',
     );
     expect(describeFix({ kind: 'createUserfields', fields: APP_USERFIELDS.slice(0, 1) })).toBe(
-      'Créer le champ Prix payé (app)',
+      'Créer le champ Price paid (app)',
     );
   });
 });
