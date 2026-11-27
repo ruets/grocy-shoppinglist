@@ -3,13 +3,16 @@
  *
  *   GROCY_URL=https://grocy-test.lan GROCY_API_KEY=xxx npm run test:api
  *
- * Optional variables: GROCY_SHOPPING_LIST_ID (defaults to the first list).
+ * Optional variables: GROCY_SHOPPING_LIST_ID (defaults to the first list),
+ * GROCY_APPLY_FIXES=1 to let the script create the app's userfields (otherwise
+ * they must already exist: open the app and tap « Réparer »).
  *
  * ⚠️ Creates a product "ZZ Test courses <timestamp>", a barcode, possibly
  * a shopping location "ZZ Magasin test", and adds stock. Only run it against a test instance.
  */
 import { GrocyClient, productPresets, type StockEntry } from '../src/api/grocy';
-import { runCheckout, type LocalDataMap } from '../src/logic/checkout';
+import { runCheckout } from '../src/logic/checkout';
+import { evaluateCheckup, pendingFixes } from '../src/logic/checkup';
 import { addDays, NEVER_EXPIRES } from '../src/logic/dates';
 
 const URL_ = process.env.GROCY_URL;
@@ -57,6 +60,23 @@ async function main() {
     client.getSystemConfig(),
   ]);
   check(lists.length > 0, `${lists.length} shopping list(s)`);
+
+  console.log('1b. Checkup (userfields)');
+  const checkupInput = async () => ({
+    server: { ok: true as const, version: info.grocy_version?.Version ?? '' },
+    lists,
+    selectedListId: lists[0]?.id ?? null,
+    userfields: await client.getUserfields(),
+    locations: locations.length,
+    units: units.length,
+  });
+  let fixes = pendingFixes(evaluateCheckup(await checkupInput())).filter((f) => f.kind === 'createUserfields');
+  if (fixes.length && process.env.GROCY_APPLY_FIXES === '1') {
+    for (const f of fixes) if (f.kind === 'createUserfields') for (const uf of f.fields) await client.createUserfield(uf);
+    fixes = pendingFixes(evaluateCheckup(await checkupInput())).filter((f) => f.kind === 'createUserfields');
+  }
+  check(fixes.length === 0, 'app userfields present (open the app and tap « Réparer », or GROCY_APPLY_FIXES=1)');
+  if (fixes.length) process.exit(1);
   check(Array.isArray(products), `${products.length} active product(s)`);
   console.log(`  Currency: ${String(config.CURRENCY)}`);
   const listId = process.env.GROCY_SHOPPING_LIST_ID ? Number(process.env.GROCY_SHOPPING_LIST_ID) : lists[0].id;
@@ -109,42 +129,59 @@ async function main() {
   const price = 1.2345;
   const bestBefore = addDays(10);
   await client.updateShoppingLine(lineId, { done: true, amount: 3 });
+  await client.setLineFields(lineId, { paidPrice: price, bestBefore });
   await client.updateShoppingLine(freeId, { done: true });
-  const local: LocalDataMap = { [lineId]: { paidUnitPrice: price, bestBefore } };
+  // « Autre prix »: a second checked line of the same product.
+  const price2 = 2.5;
+  const bestBefore2 = addDays(20);
+  const lineId2 = await client.addShoppingLine({
+    shopping_list_id: listId,
+    product_id: productId,
+    amount: 1,
+    qu_id: quId,
+    note: '',
+    done: true,
+  });
+  await client.setLineFields(lineId2, { paidPrice: price2, bestBefore: bestBefore2 });
   lines = await client.getShoppingLines(listId);
   const checkedLine = lines.find((l) => l.id === lineId);
   check(checkedLine?.done && checkedLine.amount === 3, 'line checked, amount 3');
+  check(close(checkedLine?.paid_price, price) && checkedLine?.best_before === bestBefore, `userfields read back: ${checkedLine?.paid_price} / ${checkedLine?.best_before}`);
+  check(lines.find((l) => l.id === lineId2)?.paid_price === price2, 'second price line read back');
 
   console.log('6. Checkout');
   const entriesBefore = await client.getStockEntries(productId);
-  const ours = lines.filter((l) => l.id === lineId || l.id === freeId); // leave other checked lines alone
+  const ours = lines.filter((l) => [lineId, lineId2, freeId].includes(l.id)); // leave other checked lines alone
+  const stocked = new Set<number>();
   const result = await runCheckout(ours, shopId, {
     client,
-    getLocal: (id) => local[id],
-    patchLocal: async (id, p) => {
-      local[id] = { ...local[id], ...p };
+    isStocked: (id) => stocked.has(id),
+    markStocked: async (id) => {
+      stocked.add(id);
     },
   });
   check(result.errors.length === 0, `checkout without errors ${result.errors.map((e) => e.message).join(' | ')}`);
-  check(local[lineId]?.stocked === true, 'stocked flag set');
+  check(stocked.has(lineId) && stocked.has(lineId2), 'stocked markers set');
 
   const entriesAfter = await client.getStockEntries(productId);
   const newEntries: StockEntry[] = entriesAfter.filter((e) => !entriesBefore.some((b) => b.id === e.id));
   const qty = newEntries.reduce((s, e) => s + e.amount, 0);
-  check(close(qty, 3), `stock added: ${qty} (expected 3)`);
-  check(newEntries.length > 0 && newEntries.every((e) => close(e.price, price)), `price ${newEntries.map((e) => e.price)} (expected ${price})`);
-  check(newEntries.length > 0 && newEntries.every((e) => e.best_before_date === bestBefore), `best-before ${newEntries.map((e) => e.best_before_date)} (expected ${bestBefore})`);
+  check(close(qty, 4), `stock added: ${qty} (expected 4)`);
+  const first = newEntries.filter((e) => e.best_before_date === bestBefore);
+  const second = newEntries.filter((e) => e.best_before_date === bestBefore2);
+  check(close(first.reduce((s, e) => s + e.amount, 0), 3) && first.every((e) => close(e.price, price)), `first line: 3 at ${price} until ${bestBefore}`);
+  check(close(second.reduce((s, e) => s + e.amount, 0), 1) && second.every((e) => close(e.price, price2)), `second line: 1 at ${price2} until ${bestBefore2}`);
   check(newEntries.length > 0 && newEntries.every((e) => e.shopping_location_id === shopId), `shopping location ${newEntries.map((e) => e.shopping_location_id)} (expected ${shopId})`);
 
   lines = await client.getShoppingLines(listId);
-  check(!lines.some((l) => l.id === lineId), 'product line removed from the list');
+  check(!lines.some((l) => l.id === lineId || l.id === lineId2), 'product lines removed from the list');
   check(!lines.some((l) => l.id === freeId), 'free-text line removed from the list');
 
   console.log('7. Idempotent re-checkout (stocked)');
   const again = await runCheckout([{ ...checkedLine!, done: true }], shopId, {
     client,
-    getLocal: (id) => local[id],
-    patchLocal: async () => {},
+    isStocked: (id) => stocked.has(id),
+    markStocked: async () => {},
   });
   const entriesFinal = await client.getStockEntries(productId);
   check(entriesFinal.length === entriesAfter.length, 'no double stock entry');

@@ -32,13 +32,29 @@ is enough (with `tls internal`, install Caddy's local CA on the phone). Works on
 
 ## Usage
 
-- **Checkbox** on the left of an item → purchase modal: amount, unit price ↔ line total (linked both ways; the highlighted field is the one kept when the amount changes), optional best-before date. « Retirer du panier » unchecks it.
+- **Checkbox** on the left of an item → purchase modal: amount, unit price ↔ line total (linked both ways; the highlighted field is the one kept when the amount changes), optional best-before date. « Retirer du panier » unchecks it. « ＋ Autre prix » saves the line and adds a second checked line of the same product (e.g. two packs at different prices); each line becomes its own stock entry.
 - **Item name** → edit / delete. No product selected = free-text item.
 - **Scanner**: EAN-13/8, UPC-A/E, Code128, with manual entry as a fallback. Unknown barcode → associate it with an existing product (list items first) or create a new product.
 - **Valider** (checkout): every checked product needs a best-before date. Missing dates are collected in a guided step (quick entry `1203` = 12/03, « Ne périme pas » = never expires, scan to jump to a product). Then each checked item is added to stock (amount, price, best-before date, store) and its line is deleted; free-text lines are just deleted.
 - Header totals: **Panier** (cart: entered prices, otherwise estimate), **Reste** (remaining: last price), **Liste** (list). `~` = estimate, `—` = no price known.
 
-The price paid and the best-before date are stored locally per line (AsyncStorage), with a `stocked` flag so an item is never added to stock twice if deleting its line failed.
+### Data stored in Grocy
+
+The cart is shared between phones through Grocy. On each shopping-list line, the app uses three custom fields (userfields, entity `shopping_list`), visible and editable in Grocy's web UI:
+
+| Name | Caption | Type | Content |
+|------|---------|------|---------|
+| `appprix` | Prix payé (app) | number-decimal | price paid per stock unit |
+| `appdlc` | DLC (app) | date | best-before date (`2999-12-31` = never expires) |
+| `apprayon` | Rayon (app) | number-integral | product group id for off-stock items (next release) |
+
+A line is saved in two requests (the line, then `PUT /userfields/shopping_list/{id}`), and the list is read from `uihelper_shopping_list` and `shopping_list` in parallel. Empty or invalid values are read as "not set". Last write wins between phones; the 20 s auto refresh keeps them close.
+
+The phone only keeps a per-line "already stocked" marker (AsyncStorage, 7 days) so an item is never added to stock twice if deleting its line failed. Prices and dates saved locally by v1.0.0 are not migrated.
+
+### Grocy checkup (« Grocy Doctor »)
+
+At startup the app checks Grocy (server and API key, version, selected shopping list, the three fields above, locations and units). If something is missing it shows « Vérification de Grocy » with the exact list of what it would do, and changes nothing until « Réparer » is tapped. It only adds (fields, a « Liste de courses » list when there is none) or selects an existing list; it never edits or deletes anything in Grocy. A field with the app's name but another type is reported, to be fixed by hand. The « Grocy Doctor » button in Settings opens the same screen at any time.
 
 ## Development
 
@@ -61,7 +77,7 @@ Integration test against a **test Grocy instance** (creates a "ZZ Test courses �
 GROCY_URL=http://localhost:9283 GROCY_API_KEY=xxx npm run test:api
 ```
 
-Optional: `GROCY_SHOPPING_LIST_ID`. The script reads the list, adds a product line and a free-text line, checks them off with a price, checks out, then verifies the stock entry (amount, price, best-before date, store), that the lines are gone, that nothing is added twice, and that "never expires" (2999-12-31) is accepted.
+Optional: `GROCY_SHOPPING_LIST_ID`, and `GROCY_APPLY_FIXES=1` to let the script create the app's fields (otherwise open the app once and tap « Réparer »). The script checks the fields, adds a product line and a free-text line, checks them off with a price and date in the fields, adds a second price line, checks out, then verifies the stock entries (amount, price, best-before date, store per line), that the lines are gone, that nothing is added twice, and that "never expires" (2999-12-31) is accepted.
 
 ## Android CI and releases (GitHub Actions)
 
@@ -92,7 +108,7 @@ cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 ```
 src/api/grocy.ts        typed client (no RN dependency, reused by the script)
 src/logic/              pure logic: totals, priceLink, checkout, scan, grouping, dates, text
-src/storage/            secure-store (settings) and AsyncStorage (per-line data)
+src/storage/            secure-store (settings) and AsyncStorage (stocked markers)
 src/store/useStore.ts   Zustand store
 src/screens/, src/components/
 scripts/api-integration-test.ts
