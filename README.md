@@ -32,8 +32,10 @@ is enough (with `tls internal`, install Caddy's local CA on the phone). Works on
 
 ## Usage
 
-- **Checkbox** on the left of an item → purchase modal: amount, unit price ↔ line total (linked both ways; the highlighted field is the one kept when the amount changes), optional best-before date. « Retirer du panier » unchecks it. « ＋ Autre prix » saves the line and adds a second checked line of the same product (e.g. two packs at different prices); each line becomes its own stock entry.
-- **Item name** → edit / delete. No product selected = free-text item.
+- **Checkbox** on the left of an item → purchase modal: amount, unit price ↔ line total (linked both ways; the highlighted field is the one kept when the amount changes), optional best-before date. « Retirer du panier » unchecks it. « ＋ Autre prix » saves the line and adds a second checked line of the same item (e.g. two packs at different prices); for a Grocy product each line becomes its own stock entry, an off-stock item keeps its name and aisle.
+- **+ Ajouter**: with an empty search, every Grocy product is listed by aisle; type to search (accent-insensitive). A name not found → « Créer dans Grocy » (new product) or « Ajouter hors stock ».
+- **Off-stock items** (« hors stock »): items that never go to Grocy's stock (sweets, flowers…). They are free-text lines on the Grocy list (name in the note) with an optional aisle stored in « Rayon (app) », a quantity and a price counted in the totals, no best-before date; checkout just deletes them.
+- **Item name** → edit / delete (product, or off-stock name / aisle / quantity).
 - **Scanner**: EAN-13/8, UPC-A/E, Code128, with manual entry as a fallback. Unknown barcode → associate it with an existing product (list items first) or create a new product.
 - **Valider** (checkout): every checked product needs a best-before date. Missing dates are collected in a guided step (quick entry `1203` = 12/03, « Ne périme pas » = never expires, scan to jump to a product). Then each checked item is added to stock (amount, price, best-before date, store) and its line is deleted; free-text lines are just deleted.
 - Header totals: **Panier** (cart: entered prices, otherwise estimate), **Reste** (remaining: last price), **Liste** (list). `~` = estimate, `—` = no price known.
@@ -46,7 +48,7 @@ The cart is shared between phones through Grocy. On each shopping-list line, the
 |------|---------|------|---------|
 | `appprix` | Prix payé (app) | number-decimal | price paid per stock unit |
 | `appdlc` | DLC (app) | date | best-before date (`2999-12-31` = never expires) |
-| `apprayon` | Rayon (app) | number-integral | product group id for off-stock items (next release) |
+| `apprayon` | Rayon (app) | number-integral | product group id of an off-stock item (its aisle on the list) |
 
 A line is saved in two requests (the line, then `PUT /userfields/shopping_list/{id}`), and the list is read from `uihelper_shopping_list` and `shopping_list` in parallel. Empty or invalid values are read as "not set". Last write wins between phones; the 20 s auto refresh keeps them close.
 

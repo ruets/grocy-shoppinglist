@@ -24,7 +24,7 @@ export const LineRow = React.memo(function LineRow(props: {
     lastPrice: line.last_price,
     paidUnitPrice: props.paidUnitPrice,
   });
-  const priceText = price.value === null ? (free ? '' : 'sans prix') : `${price.estimated ? '~' : ''}${props.money(price.value)}`;
+  const priceText = price.value === null ? 'sans prix' : `${price.estimated ? '~' : ''}${props.money(price.value)}`;
 
   return (
     <View
@@ -90,7 +90,11 @@ export const LineRow = React.memo(function LineRow(props: {
           </Text>
         </View>
         <Text style={{ color: c.muted, fontSize: 15, marginTop: 2 }} numberOfLines={2}>
-          {free ? '' : `${formatAmount(line.amount)} ${props.unitName}`}
+          {free
+            ? line.amount !== 1
+              ? `${formatAmount(line.amount)} unités`
+              : ''
+            : `${formatAmount(line.amount)} ${props.unitName}`}
           {!free && line.note ? ` · ${line.note}` : ''}
         </Text>
       </Pressable>

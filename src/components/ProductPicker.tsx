@@ -1,20 +1,19 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import type { Product } from '../api/grocy';
-import { searchByName } from '../logic/text';
+import { pickerSections } from '../logic/picker';
 import { useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
-import { BigButton, Field } from './ui';
+import { BigButton, Field, SectionLabel } from './ui';
 
 /**
- * Accent-insensitive Grocy product search with a
- * "create the product in Grocy" option.
+ * Grocy products grouped by aisle (empty search) or accent-insensitive search,
+ * with « create in Grocy » and, when onOffStock is given, « add off-stock ».
  */
 export function ProductPicker(props: {
   productId: number | null;
   onChange: (id: number | null) => void;
-  /** Show the free-text hint (item editor). */
-  allowFreeText?: boolean;
+  /** Offers « Ajouter … hors stock » for a name not found (item editor). */
+  onOffStock?: (name: string) => void;
 }) {
   const c = useColors();
   const meta = useStore((s) => s.meta);
@@ -25,8 +24,9 @@ export function ProductPicker(props: {
 
   const products = meta?.products ?? [];
   const selected = props.productId !== null ? meta?.productsById.get(props.productId) : undefined;
-  const results = React.useMemo(() => searchByName<Product>(products, query, 12), [products, query]);
-  const exact = results.some((p) => p.name.trim().toLowerCase() === query.trim().toLowerCase());
+  const groups = meta?.productGroups;
+  const sections = React.useMemo(() => pickerSections(products, query, groups ?? []), [products, query, groups]);
+  const exact = products.some((p) => p.name.trim().toLowerCase() === query.trim().toLowerCase());
 
   if (selected) {
     return (
@@ -72,13 +72,29 @@ export function ProductPicker(props: {
         value={query}
         onChangeText={setQuery}
         autoCorrect={false}
-        hint={
-          props.allowFreeText === false
-            ? 'Introuvable ? Tapez son nom puis « Créer ».'
-            : 'Sans produit, l’article sera en « texte libre » (note seule).'
-        }
+        hint="Introuvable ? Tapez son nom : vous pourrez le créer."
       />
-      {results.map((p) => (
+      {query.trim() && !exact ? (
+        <View style={{ gap: 8, marginBottom: 12 }}>
+          <BigButton
+            title={`＋ Créer « ${query.trim()} » dans Grocy`}
+            variant="secondary"
+            loading={creating}
+            onPress={create}
+          />
+          {props.onOffStock ? (
+            <BigButton
+              title={`＋ Ajouter « ${query.trim()} » hors stock`}
+              variant="secondary"
+              onPress={() => props.onOffStock!(query.trim().replace(/\s+/g, ' '))}
+            />
+          ) : null}
+        </View>
+      ) : null}
+      {sections.map((section) => (
+        <View key={section.title ?? 'results'} style={{ marginBottom: 8 }}>
+          {section.title ? <SectionLabel>{section.title}</SectionLabel> : null}
+          {section.data.map((p) => (
         <Pressable
           key={p.id}
           onPress={() => {
@@ -96,16 +112,9 @@ export function ProductPicker(props: {
         >
           <Text style={{ fontSize: sizes.font, color: c.text }}>{p.name}</Text>
         </Pressable>
+          ))}
+        </View>
       ))}
-      {query.trim() && !exact ? (
-        <BigButton
-          title={`＋ Créer « ${query.trim()} » dans Grocy`}
-          variant="secondary"
-          loading={creating}
-          onPress={create}
-          style={{ marginTop: 10 }}
-        />
-      ) : null}
     </View>
   );
 }

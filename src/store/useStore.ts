@@ -20,6 +20,7 @@ import {
   type Fix,
 } from '../logic/checkup';
 import { makeMoneyFormatter } from '../logic/numbers';
+import { priceLineFrom } from '../logic/priceLine';
 import { loadSettings, saveSettings, type AppSettings } from '../storage/settings';
 import {
   clearLegacyLineData,
@@ -48,6 +49,14 @@ export interface Toast {
   id: number;
   text: string;
   kind: 'error' | 'info' | 'success';
+}
+
+export interface ItemInput {
+  productId: number | null;
+  amount: number;
+  note: string;
+  /** Off-stock items only; null clears it. */
+  aisleId?: number | null;
 }
 
 export interface PurchaseInput {
@@ -89,13 +98,14 @@ interface State {
   loadAll: () => Promise<void>;
   reloadProducts: () => Promise<void>;
   refreshLines: (opts?: { silent?: boolean; pull?: boolean }) => Promise<void>;
-  addItem: (p: { productId: number | null; amount: number; note: string }) => Promise<void>;
-  updateItem: (id: number, p: { productId: number | null; amount: number; note: string }) => Promise<void>;
+  /** Off-stock item = productId null; note is its name, aisleId its « Rayon (app) ». */
+  addItem: (p: ItemInput) => Promise<void>;
+  updateItem: (id: number, p: ItemInput) => Promise<void>;
   deleteItem: (id: number) => Promise<void>;
   markPurchased: (lineId: number, p: PurchaseInput) => Promise<void>;
   unmark: (lineId: number) => Promise<void>;
   purchaseOffList: (productId: number, p: PurchaseInput) => Promise<void>;
-  /** « Autre prix »: new checked line of the same product; returns its id. */
+  /** « Autre prix »: new checked line of the same item (product or off-stock); returns its id. */
   addPriceLine: (lineId: number, p: PurchaseInput) => Promise<number>;
   createProduct: (name: string, barcode?: string) => Promise<number>;
   addBarcode: (productId: number, barcode: string) => Promise<void>;
@@ -326,7 +336,8 @@ export const useStore = create<State>((set, get) => {
 
     addItem: (p) =>
       mutate(async () => {
-        await requireClient().addShoppingLine({
+        const client = requireClient();
+        const id = await client.addShoppingLine({
           shopping_list_id: requireList(),
           product_id: p.productId,
           amount: p.amount,
@@ -334,17 +345,23 @@ export const useStore = create<State>((set, get) => {
           note: p.note,
           done: false,
         });
+        if (p.productId === null && p.aisleId != null) await client.setLineFields(id, { aisleId: p.aisleId });
         await get().refreshLines();
       }),
 
     updateItem: (id, p) =>
       mutate(async () => {
-        await requireClient().updateShoppingLine(id, {
+        const client = requireClient();
+        await client.updateShoppingLine(id, {
           product_id: p.productId,
           qu_id: stockQu(p.productId),
           amount: p.amount,
           note: p.note,
         });
+        // The aisle only applies to off-stock items; clear it when the line becomes a product.
+        const aisleId = p.productId === null ? (p.aisleId ?? null) : null;
+        const before = get().lines.find((l) => l.id === id)?.aisle_id ?? null;
+        if (aisleId !== before) await client.setLineFields(id, { aisleId });
         await get().refreshLines();
       }),
 
@@ -396,15 +413,9 @@ export const useStore = create<State>((set, get) => {
         const client = requireClient();
         const src = get().lines.find((l) => l.id === lineId);
         if (!src) throw new Error('Article introuvable');
-        const id = await client.addShoppingLine({
-          shopping_list_id: src.shopping_list_id,
-          product_id: src.product_id,
-          amount: p.amount,
-          qu_id: src.qu_id,
-          note: '',
-          done: true,
-        });
-        await client.setLineFields(id, { paidPrice: p.unitPrice, bestBefore: p.bestBefore });
+        const { line, fields } = priceLineFrom(src, p);
+        const id = await client.addShoppingLine(line);
+        await client.setLineFields(id, fields);
         await get().refreshLines({ silent: true });
         return id;
       }),

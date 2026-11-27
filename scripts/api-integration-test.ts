@@ -125,6 +125,19 @@ async function main() {
   check(added && added.amount === 2 && !added.done && added.product_name === name, 'product line present (2, unchecked)');
   check(lines.some((l) => l.id === freeId && l.product_id === null), 'free-text line present');
 
+  console.log('4b. Off-stock aisle (« Rayon (app) »)');
+  const groups = await client.getProductGroups();
+  if (groups.length) {
+    await client.setLineFields(freeId, { aisleId: groups[0].id });
+    let free = (await client.getShoppingLines(listId)).find((l) => l.id === freeId);
+    check(free?.aisle_id === groups[0].id, `aisle set: ${free?.aisle_id} (expected ${groups[0].id})`);
+    await client.setLineFields(freeId, { aisleId: null });
+    free = (await client.getShoppingLines(listId)).find((l) => l.id === freeId);
+    check(free?.aisle_id === null, 'aisle cleared');
+  } else console.log('  (no product group in Grocy: skipped)');
+  // Off-stock price is counted but never stocked.
+  await client.setLineFields(freeId, { paidPrice: 3.5 });
+
   console.log('5. Checking off with a price');
   const price = 1.2345;
   const bestBefore = addDays(10);
