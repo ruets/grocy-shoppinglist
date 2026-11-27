@@ -323,7 +323,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
                 <Text style={{ fontSize: 17, fontWeight: '700', color: c.text }}>{lineLabel(l)}</Text>
                 <Text style={{ fontSize: 14, color: c.muted }}>
                   {free
-                    ? 'Texte libre — sera supprimé'
+                    ? 'Hors stock — retiré de la liste'
                     : `${formatAmount(l.amount)} ${stockUnitName(meta, l.product_id, l.amount)}${
                         l.id in stocked ? ' · déjà en stock' : ''
                       }`}
