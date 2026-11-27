@@ -92,7 +92,7 @@ export function UnknownBarcodeModal(props: {
         </View>
       ) : null}
 
-      <ProductPicker productId={productId} onChange={setProductId} allowFreeText={false} />
+      <ProductPicker productId={productId} onChange={setProductId} />
     </Sheet>
   );
 }

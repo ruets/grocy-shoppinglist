@@ -50,6 +50,14 @@ export interface Toast {
   kind: 'error' | 'info' | 'success';
 }
 
+export interface ItemInput {
+  productId: number | null;
+  amount: number;
+  note: string;
+  /** Off-stock items only; null clears it. */
+  aisleId?: number | null;
+}
+
 export interface PurchaseInput {
   amount: number;
   unitPrice: number | null;
@@ -89,8 +97,9 @@ interface State {
   loadAll: () => Promise<void>;
   reloadProducts: () => Promise<void>;
   refreshLines: (opts?: { silent?: boolean; pull?: boolean }) => Promise<void>;
-  addItem: (p: { productId: number | null; amount: number; note: string }) => Promise<void>;
-  updateItem: (id: number, p: { productId: number | null; amount: number; note: string }) => Promise<void>;
+  /** Off-stock item = productId null; note is its name, aisleId its « Rayon (app) ». */
+  addItem: (p: ItemInput) => Promise<void>;
+  updateItem: (id: number, p: ItemInput) => Promise<void>;
   deleteItem: (id: number) => Promise<void>;
   markPurchased: (lineId: number, p: PurchaseInput) => Promise<void>;
   unmark: (lineId: number) => Promise<void>;
@@ -326,7 +335,8 @@ export const useStore = create<State>((set, get) => {
 
     addItem: (p) =>
       mutate(async () => {
-        await requireClient().addShoppingLine({
+        const client = requireClient();
+        const id = await client.addShoppingLine({
           shopping_list_id: requireList(),
           product_id: p.productId,
           amount: p.amount,
@@ -334,17 +344,23 @@ export const useStore = create<State>((set, get) => {
           note: p.note,
           done: false,
         });
+        if (p.productId === null && p.aisleId != null) await client.setLineFields(id, { aisleId: p.aisleId });
         await get().refreshLines();
       }),
 
     updateItem: (id, p) =>
       mutate(async () => {
-        await requireClient().updateShoppingLine(id, {
+        const client = requireClient();
+        await client.updateShoppingLine(id, {
           product_id: p.productId,
           qu_id: stockQu(p.productId),
           amount: p.amount,
           note: p.note,
         });
+        // The aisle only applies to off-stock items; clear it when the line becomes a product.
+        const aisleId = p.productId === null ? (p.aisleId ?? null) : null;
+        const before = get().lines.find((l) => l.id === id)?.aisle_id ?? null;
+        if (aisleId !== before) await client.setLineFields(id, { aisleId });
         await get().refreshLines();
       }),
 
