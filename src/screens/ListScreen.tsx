@@ -6,7 +6,7 @@ import { LineRow } from '../components/LineRow';
 import { ToastHost } from '../components/ToastHost';
 import { TotalsHeader } from '../components/TotalsHeader';
 import { BigButton } from '../components/ui';
-import { groupLines } from '../logic/grouping';
+import { aisleNameMap, groupLines } from '../logic/grouping';
 import { decideScan } from '../logic/scan';
 import { computeTotals } from '../logic/totals';
 import { stockUnitName, useStore } from '../store/useStore';
@@ -60,7 +60,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
     };
   }, [refreshLines]);
 
-  const sections = React.useMemo(() => groupLines(lines), [lines]);
+  const sections = React.useMemo(() => groupLines(lines, aisleNameMap(meta)), [lines, meta]);
   const totals = React.useMemo(
     () =>
       computeTotals(
