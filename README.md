@@ -60,6 +60,10 @@ The phone only keeps a per-line "already stocked" marker (AsyncStorage, 7 days) 
 
 At startup the app checks Grocy (server and API key, version, selected shopping list, the three fields above, locations and units, the location for new products). If something is missing it shows « Vérification de Grocy » with the exact list of what it would do, and changes nothing until « Réparer » is tapped. It only adds (fields, a « Liste de courses » list when there is none) or selects an existing list; it never edits or deletes anything in Grocy. A field with the app's name but another type is reported, to be fixed by hand. The « Grocy Doctor » button in Settings opens the same screen at any time.
 
+### Language
+
+The app is in French or English, following the phone's language settings (the first of the preferred languages that the app speaks; French otherwise). Prices and decimal numbers follow the language. Dates are always typed and shown day first (`DD/MM/YYYY`, quick entry `1203` = 12 March), and « jamais » / "never" both mean "never expires". The field captions and the « Liste de courses » list the app creates in Grocy stay in French, since they are stored in Grocy.
+
 ## Development
 
 In the iOS simulator (no copy-paste), settings can be prefilled on first launch, **in development only**:
@@ -111,6 +115,7 @@ cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 
 ```
 src/api/grocy.ts        typed client (no RN dependency, reused by the script)
+src/i18n/               fr.ts (source of every UI string), en.ts (same keys, type-checked), language choice
 src/logic/              pure logic: totals, priceLink, checkout, scan, grouping, dates, text
 src/storage/            secure-store (settings) and AsyncStorage (stocked markers)
 src/store/useStore.ts   Zustand store
