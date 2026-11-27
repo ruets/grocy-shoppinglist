@@ -16,7 +16,7 @@ type Phase = 'dates' | 'recap' | 'result';
 export function CheckoutModal(props: { visible: boolean; onClose: () => void }) {
   const c = useColors();
   const lines = useStore((s) => s.lines);
-  const local = useStore((s) => s.local);
+  const stocked = useStore((s) => s.stocked);
   const meta = useStore((s) => s.meta);
   const money = useStore((s) => s.money);
   const lastLoc = useStore((s) => s.lastShoppingLocationId);
@@ -37,7 +37,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
   const [scanning, setScanning] = React.useState(false);
 
   const checked = lines.filter((l) => l.done);
-  const missing = linesMissingBestBefore(lines, (id) => local[id]);
+  const missing = linesMissingBestBefore(lines);
 
   const startDates = (startId?: number) => {
     const ids = missing.map((l) => l.id);
@@ -70,15 +70,35 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
 
   // Load the already entered date when switching items.
   React.useEffect(() => {
-    if (current) setDateText(bestBeforeToText(local[current.id]?.bestBefore));
+    if (current) setDateText(bestBeforeToText(current.best_before));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
+
+  // The date is saved in Grocy shortly after typing stops, and right away
+  // when leaving the item (avoids one request per keystroke).
+  const pending = React.useRef<{ lineId: number; iso: string | null } | null>(null);
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushDate = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    const p = pending.current;
+    pending.current = null;
+    if (p) setBestBefore(p.lineId, p.iso).catch(() => undefined);
+  };
+  React.useEffect(() => () => flushDate(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onDateText = (t: string) => {
     setDateText(t);
     if (!current) return;
     const p = parseBestBeforeText(t);
-    if (p !== 'invalid') setBestBefore(current.id, p);
+    if (p === 'invalid') return;
+    if (timer.current) clearTimeout(timer.current);
+    if (p === current.best_before) {
+      pending.current = null;
+      return;
+    }
+    pending.current = { lineId: current.id, iso: p };
+    timer.current = setTimeout(flushDate, 600);
   };
 
   const goNext = () => {
@@ -86,12 +106,14 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
       showToast('Date invalide', 'error');
       return;
     }
+    flushDate();
     if (pos + 1 >= activeQueue.length) setPhase('recap');
     else setIndex(pos + 1);
   };
 
   const onScanned = async (code: string) => {
     setScanning(false);
+    flushDate();
     const client = useStore.getState().client;
     try {
       const details = client ? await client.getProductByBarcode(code) : null;
@@ -122,7 +144,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
     done: true,
     freeText: l.product_id === null,
     lastPrice: l.last_price,
-    paidUnitPrice: local[l.id]?.paidUnitPrice ?? null,
+    paidUnitPrice: l.paid_price,
   });
   const cart = computeTotals(checked.map(toTotals)).cart;
 
@@ -177,13 +199,21 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
           visible={props.visible}
           title="Dates de péremption"
           onClose={props.onClose}
-          footer={<BigButton title="Voir le récapitulatif" onPress={() => setPhase('recap')} />}
+          footer={
+            <BigButton
+              title="Voir le récapitulatif"
+              onPress={() => {
+                flushDate();
+                setPhase('recap');
+              }}
+            />
+          }
         >
           <Text style={{ color: c.muted, fontSize: 17 }}>Toutes les dates sont saisies.</Text>
         </Sheet>
       );
     }
-    const remaining = linesMissingBestBefore(lines, (id) => local[id]).length;
+    const remaining = linesMissingBestBefore(lines).length;
     const hasDate = parseBestBeforeText(dateText) !== null;
     return (
       <Sheet
@@ -198,7 +228,10 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
                 variant="secondary"
                 style={{ flex: 1 }}
                 disabled={pos === 0}
-                onPress={() => setIndex(pos - 1)}
+                onPress={() => {
+                  flushDate();
+                  setIndex(pos - 1);
+                }}
               />
               <BigButton
                 title={pos + 1 >= activeQueue.length ? 'Récapitulatif ›' : hasDate ? 'Suivant ›' : 'Passer ›'}
@@ -272,8 +305,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
         checked.map((l) => {
           const p = linePrice(toTotals(l));
           const free = l.product_id === null;
-          const loc = local[l.id];
-          const bb = loc?.bestBefore;
+          const bb = l.best_before;
           return (
             <Pressable
               key={l.id}
@@ -293,7 +325,7 @@ export function CheckoutModal(props: { visible: boolean; onClose: () => void }) 
                   {free
                     ? 'Texte libre — sera supprimé'
                     : `${formatAmount(l.amount)} ${stockUnitName(meta, l.product_id, l.amount)}${
-                        loc?.stocked ? ' · déjà en stock' : ''
+                        l.id in stocked ? ' · déjà en stock' : ''
                       }`}
                 </Text>
                 {!free ? (

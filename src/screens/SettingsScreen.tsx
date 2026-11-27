@@ -7,7 +7,7 @@ import { ToastHost } from '../components/ToastHost';
 import { useStore } from '../store/useStore';
 import { sizes, useColors } from '../theme';
 
-export function SettingsScreen(props: { onDone: () => void; canClose: boolean }) {
+export function SettingsScreen(props: { onDone: () => void; canClose: boolean; onOpenDoctor: () => void }) {
   const c = useColors();
   const settings = useStore((s) => s.settings);
   const applySettings = useStore((s) => s.applySettings);
@@ -106,6 +106,16 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean })
         </View>
 
         <BigButton title="Enregistrer" loading={saving} onPress={save} style={{ marginTop: 28 }} />
+
+        {props.canClose ? (
+          <View style={{ marginTop: 32 }}>
+            <SectionLabel>Diagnostic</SectionLabel>
+            <BigButton title="Grocy Doctor" variant="secondary" onPress={props.onOpenDoctor} />
+            <Text style={{ color: c.muted, fontSize: 14, marginTop: 6 }}>
+              Vérifie que Grocy a tout ce qu’il faut à l’app, et propose de l’ajouter.
+            </Text>
+          </View>
+        ) : null}
       </ScrollView>
       <ToastHost />
     </SafeAreaView>

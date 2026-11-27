@@ -1,40 +1,35 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { LineLocalData } from '../logic/checkout';
+/** Line id → timestamp (ms) of the stock add, so a failed deletion never adds stock twice. */
+export type StockedMap = Record<number, number>;
 
-export interface StoredLineData extends LineLocalData {
-  /** Last-modified timestamp (ms), used for cleanup. */
-  updatedAt: number;
-}
-
-export type StoredLineMap = Record<number, StoredLineData>;
-
-const K_LINES = 'line_local_data_v1';
+const K_STOCKED = 'stocked_lines_v1';
+/** v1.0.0 stored prices/dates locally; now in Grocy userfields (not migrated). */
+const K_LEGACY_LINES = 'line_local_data_v1';
 const K_LAST_LOCATION = 'last_shopping_location_id';
+const KEEP_MS = 7 * 86_400_000;
 
-export async function loadLineData(): Promise<StoredLineMap> {
+export async function loadStocked(): Promise<StockedMap> {
   try {
-    const raw = await AsyncStorage.getItem(K_LINES);
-    return raw ? (JSON.parse(raw) as StoredLineMap) : {};
+    const raw = await AsyncStorage.getItem(K_STOCKED);
+    return raw ? (JSON.parse(raw) as StockedMap) : {};
   } catch {
     return {};
   }
 }
 
-export async function saveLineData(map: StoredLineMap): Promise<void> {
-  await AsyncStorage.setItem(K_LINES, JSON.stringify(map));
+export async function saveStocked(map: StockedMap): Promise<void> {
+  await AsyncStorage.setItem(K_STOCKED, JSON.stringify(map));
 }
 
-/**
- * Drops entries for lines that no longer exist. Very recent entries are
- * kept to avoid racing with an in-flight refresh.
- */
-export function pruneLineData(map: StoredLineMap, existingIds: Set<number>, now = Date.now()): StoredLineMap {
-  const out: StoredLineMap = {};
-  for (const [k, v] of Object.entries(map)) {
-    const id = Number(k);
-    if (existingIds.has(id) || now - (v.updatedAt ?? 0) < 60_000) out[id] = v;
-  }
+/** Drops markers older than 7 days (the line is long gone by then). */
+export function pruneStocked(map: StockedMap, now = Date.now()): StockedMap {
+  const out: StockedMap = {};
+  for (const [k, t] of Object.entries(map)) if (now - t < KEEP_MS) out[Number(k)] = t;
   return out;
+}
+
+export async function clearLegacyLineData(): Promise<void> {
+  await AsyncStorage.removeItem(K_LEGACY_LINES);
 }
 
 export async function loadLastShoppingLocation(): Promise<number | null> {

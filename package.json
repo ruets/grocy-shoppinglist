@@ -18,6 +18,8 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.19.4",
     "@types/react": "~19.3.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4",
     "jest": "^30.5.2",
     "jest-expo": "^58.0.15",
     "tsx": "^4.23.15",
@@ -30,7 +32,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:api": "tsx scripts/api-integration-test.ts"
+    "test:api": "tsx scripts/api-integration-test.ts",
+    "lint": "expo lint"
   },
   "private": true,
   "jest": {

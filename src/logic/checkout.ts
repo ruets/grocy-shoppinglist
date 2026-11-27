@@ -1,24 +1,9 @@
 import type { GrocyClient, ShoppingLine } from '../api/grocy';
 import { lineLabel } from './grouping';
 
-/** Data entered in store, stored locally per line id. */
-export interface LineLocalData {
-  /** Price paid per stock unit. */
-  paidUnitPrice?: number | null;
-  /** Best-before date YYYY-MM-DD (null = product default). */
-  bestBefore?: string | null;
-  /** Already added to stock (prevents a double add if deleting the line failed). */
-  stocked?: boolean;
-}
-
-export type LocalDataMap = Record<number, LineLocalData>;
-
 /** Checked product lines without a best-before date (they block checkout). */
-export function linesMissingBestBefore(
-  lines: ShoppingLine[],
-  getLocal: (lineId: number) => LineLocalData | undefined,
-): ShoppingLine[] {
-  return lines.filter((l) => l.done && l.product_id !== null && !getLocal(l.id)?.bestBefore);
+export function linesMissingBestBefore(lines: ShoppingLine[]): ShoppingLine[] {
+  return lines.filter((l) => l.done && l.product_id !== null && !l.best_before);
 }
 
 export interface CheckoutResult {
@@ -28,15 +13,17 @@ export interface CheckoutResult {
 
 export interface CheckoutDeps {
   client: GrocyClient;
-  getLocal: (lineId: number) => LineLocalData | undefined;
-  /** Persists a patch of the local data (e.g. stocked = true). */
-  patchLocal: (lineId: number, patch: LineLocalData) => Promise<void>;
+  /** Line already added to stock by this phone (deletion failed afterwards). */
+  isStocked: (lineId: number) => boolean;
+  markStocked: (lineId: number) => Promise<void>;
+  /** Called once the line is deleted: its id may be reused by Grocy later. */
+  clearStocked: (lineId: number) => Promise<void>;
   onProgress?: (done: number, total: number) => void;
 }
 
 /**
  * Checks out purchases: for each checked line, add to stock (unless free text
- * or already "stocked"), mark it stocked locally, then delete the line.
+ * or already stocked by this phone), remember it as stocked, then delete the line.
  * Errors are collected per item.
  */
 export async function runCheckout(
@@ -51,19 +38,19 @@ export async function runCheckout(
     const label = lineLabel(line);
     try {
       if (line.product_id !== null) {
-        const local = deps.getLocal(line.id);
-        if (!local?.stocked) {
+        if (!deps.isStocked(line.id)) {
           if (!(line.amount > 0)) throw new Error('Quantité nulle');
           await deps.client.purchase(line.product_id, {
             amount: line.amount,
-            price: local?.paidUnitPrice ?? null,
-            bestBeforeDate: local?.bestBefore ?? null,
+            price: line.paid_price,
+            bestBeforeDate: line.best_before,
             shoppingLocationId,
           });
-          await deps.patchLocal(line.id, { stocked: true });
+          await deps.markStocked(line.id);
         }
       }
       await deps.client.deleteShoppingLine(line.id);
+      if (line.product_id !== null) await deps.clearStocked(line.id).catch(() => undefined);
       result.ok.push({ id: line.id, label });
     } catch (e: any) {
       result.errors.push({ id: line.id, label, message: e?.message ?? String(e) });

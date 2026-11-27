@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   GrocyClient,
+  GrocyError,
   productPresets,
   type NamedEntity,
   type Product,
@@ -9,16 +10,25 @@ import {
   type ShoppingList,
   type UserSettings,
 } from '../api/grocy';
-import { runCheckout, type CheckoutResult, type LineLocalData } from '../logic/checkout';
+import { runCheckout, type CheckoutResult } from '../logic/checkout';
+import {
+  DEFAULT_LIST_NAME,
+  evaluateCheckup,
+  isBlocking,
+  type CheckResult,
+  type CheckupInput,
+  type Fix,
+} from '../logic/checkup';
 import { makeMoneyFormatter } from '../logic/numbers';
 import { loadSettings, saveSettings, type AppSettings } from '../storage/settings';
 import {
-  loadLineData,
+  clearLegacyLineData,
   loadLastShoppingLocation,
-  pruneLineData,
+  loadStocked,
+  pruneStocked,
   saveLastShoppingLocation,
-  saveLineData,
-  type StoredLineMap,
+  saveStocked,
+  type StockedMap,
 } from '../storage/local';
 
 export interface Meta {
@@ -46,13 +56,21 @@ export interface PurchaseInput {
   bestBefore: string | null;
 }
 
+/**
+ * init: loading settings; checking: startup Grocy checkup; blocked: the
+ * checkup found something to fix (shown before the list); ready: list usable.
+ */
+export type Phase = 'init' | 'checking' | 'blocked' | 'ready';
+
 interface State {
-  ready: boolean;
+  phase: Phase;
   settings: AppSettings;
   client: GrocyClient | null;
   meta: Meta | null;
   lines: ShoppingLine[];
-  local: StoredLineMap;
+  stocked: StockedMap;
+  /** Last checkup results (startup or « Grocy Doctor »). */
+  checkup: CheckResult[] | null;
   lastShoppingLocationId: number | null;
   loading: boolean;
   refreshing: boolean;
@@ -64,6 +82,10 @@ interface State {
 
   init: () => Promise<void>;
   applySettings: (s: AppSettings) => Promise<void>;
+  /** Runs the checks; never changes anything in Grocy. */
+  runCheckup: () => Promise<CheckResult[]>;
+  /** Applies fixes the user confirmed, re-checks, and opens the list if nothing blocks. */
+  applyFixes: (fixes: Fix[]) => Promise<void>;
   loadAll: () => Promise<void>;
   reloadProducts: () => Promise<void>;
   refreshLines: (opts?: { silent?: boolean; pull?: boolean }) => Promise<void>;
@@ -73,9 +95,11 @@ interface State {
   markPurchased: (lineId: number, p: PurchaseInput) => Promise<void>;
   unmark: (lineId: number) => Promise<void>;
   purchaseOffList: (productId: number, p: PurchaseInput) => Promise<void>;
+  /** « Autre prix »: new checked line of the same product; returns its id. */
+  addPriceLine: (lineId: number, p: PurchaseInput) => Promise<number>;
   createProduct: (name: string, barcode?: string) => Promise<number>;
   addBarcode: (productId: number, barcode: string) => Promise<void>;
-  /** Stores a line's best-before date locally; null = still to be entered. */
+  /** Stores a line's best-before date in Grocy; null = still to be entered. */
   setBestBefore: (lineId: number, iso: string | null) => Promise<void>;
   checkout: (shoppingLocationId: number | null, onProgress?: (d: number, t: number) => void) => Promise<CheckoutResult>;
   showToast: (text: string, kind?: Toast['kind']) => void;
@@ -101,12 +125,34 @@ export const useStore = create<State>((set, get) => {
     }
   }
 
-  async function patchLocal(lineId: number, patch: LineLocalData | null) {
-    const map = { ...get().local };
-    if (patch === null) delete map[lineId];
-    else map[lineId] = { ...map[lineId], ...patch, updatedAt: Date.now() };
-    set({ local: map });
-    await saveLineData(map);
+  /** Optimistic local update of a line, until the next refresh. */
+  function patchLine(lineId: number, patch: Partial<ShoppingLine>) {
+    set({ lines: get().lines.map((l) => (l.id === lineId ? { ...l, ...patch } : l)) });
+  }
+
+  async function clearStocked(lineId: number) {
+    const map = { ...get().stocked };
+    delete map[lineId];
+    set({ stocked: map });
+    await saveStocked(map);
+  }
+
+  async function markStocked(lineId: number) {
+    const map = { ...get().stocked, [lineId]: Date.now() };
+    set({ stocked: map });
+    await saveStocked(map);
+  }
+
+  /** Startup gate: checkup first, the list only when nothing blocks. */
+  async function startup() {
+    set({ phase: 'checking' });
+    const results = await get().runCheckup();
+    if (isBlocking(results)) {
+      set({ phase: 'blocked' });
+      return;
+    }
+    await get().loadAll();
+    set({ phase: 'ready' });
   }
 
   function requireClient(): GrocyClient {
@@ -127,12 +173,13 @@ export const useStore = create<State>((set, get) => {
   }
 
   return {
-    ready: false,
+    phase: 'init',
     settings: { url: '', apiKey: '', shoppingListId: null },
     client: null,
     meta: null,
     lines: [],
-    local: {},
+    stocked: {},
+    checkup: null,
     lastShoppingLocationId: null,
     loading: false,
     refreshing: false,
@@ -142,22 +189,76 @@ export const useStore = create<State>((set, get) => {
     money: makeMoneyFormatter('EUR'),
 
     async init() {
-      const [settings, local, lastLoc] = await Promise.all([
+      const [settings, stocked, lastLoc] = await Promise.all([
         loadSettings(),
-        loadLineData(),
+        loadStocked(),
         loadLastShoppingLocation(),
+        clearLegacyLineData().catch(() => undefined),
       ]);
       const client = settings.url && settings.apiKey ? new GrocyClient(settings.url, settings.apiKey) : null;
-      set({ settings, local, lastShoppingLocationId: lastLoc, client, ready: true });
-      if (client) await get().loadAll();
+      set({ settings, stocked: pruneStocked(stocked), lastShoppingLocationId: lastLoc, client });
+      if (client) await startup();
+      else set({ phase: 'ready' });
     },
 
     async applySettings(s) {
       await saveSettings(s);
       const client = new GrocyClient(s.url, s.apiKey);
       set({ settings: s, client, meta: null, lines: [] });
-      await get().loadAll();
+      await startup();
     },
+
+    async runCheckup() {
+      const client = requireClient();
+      let input: CheckupInput;
+      try {
+        const info = await client.getSystemInfo();
+        const [lists, userfields, locations, units] = await Promise.all([
+          client.getShoppingLists(),
+          client.getUserfields(),
+          client.getLocations(),
+          client.getQuantityUnits(),
+        ]);
+        input = {
+          server: { ok: true, version: info.grocy_version?.Version ?? '' },
+          lists,
+          selectedListId: get().settings.shoppingListId,
+          userfields,
+          locations: locations.length,
+          units: units.length,
+        };
+      } catch (e) {
+        const error = e instanceof GrocyError ? e : new GrocyError(errMsg(e), null, 'http');
+        input = { server: { ok: false, error }, lists: [], selectedListId: null, userfields: [], locations: 0, units: 0 };
+      }
+      const results = evaluateCheckup(input);
+      set({ checkup: results });
+      return results;
+    },
+
+    applyFixes: (fixes) =>
+      mutate(async () => {
+        const client = requireClient();
+        const selectList = async (id: number) => {
+          const next = { ...get().settings, shoppingListId: id };
+          await saveSettings(next);
+          set({ settings: next });
+        };
+        for (const fix of fixes) {
+          if (fix.kind === 'createUserfields') {
+            for (const f of fix.fields) await client.createUserfield(f);
+          } else if (fix.kind === 'createList') {
+            await selectList(await client.createShoppingList(DEFAULT_LIST_NAME));
+          } else if (fix.kind === 'selectList') {
+            await selectList(fix.listId);
+          }
+        }
+        const results = await get().runCheckup();
+        if (!isBlocking(results)) {
+          await get().loadAll();
+          set({ phase: 'ready' });
+        }
+      }),
 
     async loadAll() {
       const client = get().client;
@@ -191,13 +292,7 @@ export const useStore = create<State>((set, get) => {
           },
           money: makeMoneyFormatter(currency),
         });
-        // Default list: the first one if none is selected or it no longer exists.
-        const { settings } = get();
-        if (shoppingLists.length && !shoppingLists.some((l) => l.id === settings.shoppingListId)) {
-          const next = { ...settings, shoppingListId: shoppingLists[0].id };
-          await saveSettings(next);
-          set({ settings: next });
-        }
+        // No automatic list choice here: the checkup asks first.
         await get().refreshLines({ silent: true });
       } catch (e) {
         set({ loadError: errMsg(e) });
@@ -220,10 +315,7 @@ export const useStore = create<State>((set, get) => {
       if (opts.pull) set({ refreshing: true });
       try {
         const lines = await client.getShoppingLines(listId);
-        const pruned = pruneLineData(get().local, new Set(lines.map((l) => l.id)));
-        const changed = Object.keys(pruned).length !== Object.keys(get().local).length;
-        set({ lines, loadError: null, ...(changed ? { local: pruned } : {}) });
-        if (changed) await saveLineData(pruned);
+        set({ lines, loadError: null });
       } catch (e) {
         if (!opts.silent || opts.pull) get().showToast(errMsg(e), 'error');
         else set({ loadError: errMsg(e) });
@@ -260,31 +352,34 @@ export const useStore = create<State>((set, get) => {
       mutate(async () => {
         await requireClient().deleteShoppingLine(id);
         set({ lines: get().lines.filter((l) => l.id !== id) });
-        await patchLocal(id, null);
         await get().refreshLines();
       }),
 
     markPurchased: (lineId, p) =>
       mutate(async () => {
-        await requireClient().updateShoppingLine(lineId, { done: true, amount: p.amount });
-        await patchLocal(lineId, { paidUnitPrice: p.unitPrice, bestBefore: p.bestBefore });
-        set({ lines: get().lines.map((l) => (l.id === lineId ? { ...l, done: true, amount: p.amount } : l)) });
+        const client = requireClient();
+        await client.updateShoppingLine(lineId, { done: true, amount: p.amount });
+        patchLine(lineId, { done: true, amount: p.amount });
+        await client.setLineFields(lineId, { paidPrice: p.unitPrice, bestBefore: p.bestBefore });
+        patchLine(lineId, { paid_price: p.unitPrice, best_before: p.bestBefore });
         await get().refreshLines({ silent: true });
       }),
 
     unmark: (lineId) =>
       mutate(async () => {
-        await requireClient().updateShoppingLine(lineId, { done: false });
-        // Keep the stocked flag (prevents double add), forget price and date.
-        const prev = get().local[lineId];
-        await patchLocal(lineId, prev?.stocked ? { paidUnitPrice: null, bestBefore: null, stocked: true } : null);
-        set({ lines: get().lines.map((l) => (l.id === lineId ? { ...l, done: false } : l)) });
+        const client = requireClient();
+        // The stocked marker stays (prevents a double add); price and date are cleared.
+        await client.updateShoppingLine(lineId, { done: false });
+        patchLine(lineId, { done: false });
+        await client.setLineFields(lineId, { paidPrice: null, bestBefore: null });
+        patchLine(lineId, { paid_price: null, best_before: null });
         await get().refreshLines({ silent: true });
       }),
 
     purchaseOffList: (productId, p) =>
       mutate(async () => {
-        const id = await requireClient().addShoppingLine({
+        const client = requireClient();
+        const id = await client.addShoppingLine({
           shopping_list_id: requireList(),
           product_id: productId,
           amount: p.amount,
@@ -292,8 +387,26 @@ export const useStore = create<State>((set, get) => {
           note: '',
           done: true,
         });
-        await patchLocal(id, { paidUnitPrice: p.unitPrice, bestBefore: p.bestBefore });
+        await client.setLineFields(id, { paidPrice: p.unitPrice, bestBefore: p.bestBefore });
         await get().refreshLines({ silent: true });
+      }),
+
+    addPriceLine: (lineId, p) =>
+      mutate(async () => {
+        const client = requireClient();
+        const src = get().lines.find((l) => l.id === lineId);
+        if (!src) throw new Error('Article introuvable');
+        const id = await client.addShoppingLine({
+          shopping_list_id: src.shopping_list_id,
+          product_id: src.product_id,
+          amount: p.amount,
+          qu_id: src.qu_id,
+          note: '',
+          done: true,
+        });
+        await client.setLineFields(id, { paidPrice: p.unitPrice, bestBefore: p.bestBefore });
+        await get().refreshLines({ silent: true });
+        return id;
       }),
 
     createProduct: (name, barcode) =>
@@ -316,9 +429,13 @@ export const useStore = create<State>((set, get) => {
         await requireClient().addBarcode(productId, barcode);
       }),
 
-    async setBestBefore(lineId, iso) {
-      await patchLocal(lineId, { bestBefore: iso });
-    },
+    setBestBefore: (lineId, iso) =>
+      mutate(async () => {
+        // Optimistic: the walkthrough and recap read it at once; a failure
+        // shows a toast and the next refresh restores Grocy's value.
+        patchLine(lineId, { best_before: iso });
+        await requireClient().setLineFields(lineId, { bestBefore: iso });
+      }),
 
     async checkout(shoppingLocationId, onProgress) {
       set((s) => ({ busy: s.busy + 1, lastShoppingLocationId: shoppingLocationId }));
@@ -326,8 +443,9 @@ export const useStore = create<State>((set, get) => {
         await saveLastShoppingLocation(shoppingLocationId);
         const result = await runCheckout(get().lines, shoppingLocationId, {
           client: requireClient(),
-          getLocal: (id) => get().local[id],
-          patchLocal: (id, patch) => patchLocal(id, patch),
+          isStocked: (id) => id in get().stocked,
+          markStocked,
+          clearStocked,
           onProgress,
         });
         await get().refreshLines({ silent: true });
