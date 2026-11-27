@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GrocyClient, type ShoppingList } from '../api/grocy';
+import { GrocyClient, type NamedEntity, type ShoppingList } from '../api/grocy';
 import { BigButton, Chip, Field, SectionLabel } from '../components/ui';
 import { ToastHost } from '../components/ToastHost';
 import { useStore } from '../store/useStore';
@@ -16,6 +16,8 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
   const [apiKey, setApiKey] = React.useState(settings.apiKey);
   const [listId, setListId] = React.useState<number | null>(settings.shoppingListId);
   const [lists, setLists] = React.useState<ShoppingList[] | null>(useStore.getState().meta?.shoppingLists ?? null);
+  const [newLocId, setNewLocId] = React.useState<number | null>(settings.newProductLocationId);
+  const [locations, setLocations] = React.useState<NamedEntity[] | null>(useStore.getState().meta?.locations ?? null);
   const [testing, setTesting] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [status, setStatus] = React.useState<{ ok: boolean; text: string } | null>(null);
@@ -26,8 +28,9 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
     try {
       const client = new GrocyClient(url, apiKey.trim());
       const info = await client.getSystemInfo();
-      const ls = await client.getShoppingLists();
+      const [ls, locs] = await Promise.all([client.getShoppingLists(), client.getLocations()]);
       setLists(ls);
+      setLocations(locs);
       if (ls.length && !ls.some((l) => l.id === listId)) setListId(ls[0].id);
       setStatus({ ok: true, text: `Connecté à Grocy ${info.grocy_version?.Version ?? ''} ✓` });
     } catch (e: any) {
@@ -44,7 +47,12 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
     }
     setSaving(true);
     try {
-      await applySettings({ url: url.trim(), apiKey: apiKey.trim(), shoppingListId: listId });
+      await applySettings({
+        url: url.trim(),
+        apiKey: apiKey.trim(),
+        shoppingListId: listId,
+        newProductLocationId: newLocId,
+      });
       const err = useStore.getState().loadError;
       if (err) showToast(err, 'error');
       else showToast('Réglages enregistrés', 'success');
@@ -103,6 +111,28 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
               ))}
             </View>
           )}
+        </View>
+
+        <View style={{ marginTop: 24 }}>
+          <SectionLabel>Emplacement des nouveaux produits</SectionLabel>
+          {locations === null ? (
+            <Text style={{ color: c.muted, fontSize: 16 }}>Testez la connexion pour charger les emplacements.</Text>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <Chip label="Préréglage Grocy" selected={newLocId === null} onPress={() => setNewLocId(null)} />
+              {[...locations]
+                .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+                .map((l) => (
+                  <Chip key={l.id} label={l.name} selected={l.id === newLocId} onPress={() => setNewLocId(l.id)} />
+                ))}
+              {newLocId !== null && !locations.some((l) => l.id === newLocId) ? (
+                <Chip label="Introuvable" selected onPress={() => setNewLocId(null)} />
+              ) : null}
+            </View>
+          )}
+          <Text style={{ color: c.muted, fontSize: 14, marginTop: 6 }}>
+            Les produits créés depuis l’app y sont rangés, à déplacer ensuite dans Grocy.
+          </Text>
         </View>
 
         <BigButton title="Enregistrer" loading={saving} onPress={save} style={{ marginTop: 28 }} />

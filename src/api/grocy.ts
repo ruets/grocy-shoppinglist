@@ -455,16 +455,21 @@ export class GrocyClient {
   }
 }
 
-/** Default location / quantity unit used to create a product. */
+/**
+ * Location / quantity unit used to create a product. The app's preferred
+ * location wins while it still exists; otherwise Grocy's presets.
+ */
 export function productPresets(
   settings: UserSettings,
   locations: NamedEntity[],
   units: QuantityUnit[],
+  preferredLocationId: number | null = null,
 ): { locationId: number | null; quId: number | null } {
   const loc = toNum(settings.product_presets_location_id);
   const qu = toNum(settings.product_presets_qu_id);
+  const preferred = locations.some((l) => l.id === preferredLocationId) ? preferredLocationId : null;
   return {
-    locationId: loc !== null && loc !== -1 ? loc : (locations[0]?.id ?? null),
+    locationId: preferred ?? (loc !== null && loc !== -1 ? loc : (locations[0]?.id ?? null)),
     quId: qu !== null && qu !== -1 ? qu : (units[0]?.id ?? null),
   };
 }

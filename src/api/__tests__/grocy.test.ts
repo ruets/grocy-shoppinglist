@@ -1,4 +1,4 @@
-import { GrocyClient, GrocyError } from '../grocy';
+import { GrocyClient, GrocyError, productPresets } from '../grocy';
 
 type Call = { url: string; init: RequestInit };
 
@@ -134,5 +134,25 @@ describe('GrocyClient', () => {
     await expect(c.createShoppingList('Liste de courses')).resolves.toBe(2);
     expect(f.calls[0].url).toBe('http://g/api/objects/shopping_lists');
     expect(JSON.parse(String(f.calls[0].init.body))).toEqual({ name: 'Liste de courses' });
+  });
+});
+
+describe('productPresets', () => {
+  const locations = [
+    { id: 1, name: 'Frigo' },
+    { id: 4, name: 'À ranger' },
+  ];
+  const units = [{ id: 2, name: 'Pièce', name_plural: null }];
+  const settings = { product_presets_location_id: '1', product_presets_qu_id: '2' };
+
+  it('uses the preferred location when it exists', () => {
+    expect(productPresets(settings, locations, units, 4)).toEqual({ locationId: 4, quId: 2 });
+  });
+  it('preferred location gone → Grocy preset', () => {
+    expect(productPresets(settings, locations, units, 99)).toEqual({ locationId: 1, quId: 2 });
+  });
+  it('no preferred location → Grocy preset', () => {
+    expect(productPresets(settings, locations, units, null)).toEqual({ locationId: 1, quId: 2 });
+    expect(productPresets({}, locations, units)).toEqual({ locationId: 1, quId: 2 });
   });
 });

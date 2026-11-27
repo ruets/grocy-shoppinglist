@@ -184,7 +184,7 @@ export const useStore = create<State>((set, get) => {
 
   return {
     phase: 'init',
-    settings: { url: '', apiKey: '', shoppingListId: null },
+    settings: { url: '', apiKey: '', shoppingListId: null, newProductLocationId: null },
     client: null,
     meta: null,
     lines: [],
@@ -234,12 +234,13 @@ export const useStore = create<State>((set, get) => {
           lists,
           selectedListId: get().settings.shoppingListId,
           userfields,
-          locations: locations.length,
+          locations,
+          newProductLocationId: get().settings.newProductLocationId,
           units: units.length,
         };
       } catch (e) {
         const error = e instanceof GrocyError ? e : new GrocyError(errMsg(e), null, 'http');
-        input = { server: { ok: false, error }, lists: [], selectedListId: null, userfields: [], locations: 0, units: 0 };
+        input = { server: { ok: false, error }, lists: [], selectedListId: null, userfields: [], locations: [], newProductLocationId: null, units: 0 };
       }
       const results = evaluateCheckup(input);
       set({ checkup: results });
@@ -425,7 +426,12 @@ export const useStore = create<State>((set, get) => {
         const client = requireClient();
         const meta = get().meta;
         if (!meta) throw new Error('Données Grocy non chargées');
-        const { locationId, quId } = productPresets(meta.userSettings, meta.locations, meta.units);
+        const { locationId, quId } = productPresets(
+          meta.userSettings,
+          meta.locations,
+          meta.units,
+          get().settings.newProductLocationId,
+        );
         if (locationId === null || quId === null) {
           throw new Error('Impossible de créer le produit : aucun emplacement ou unité dans Grocy.');
         }

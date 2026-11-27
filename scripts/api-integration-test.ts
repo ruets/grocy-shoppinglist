@@ -67,7 +67,8 @@ async function main() {
     lists,
     selectedListId: lists[0]?.id ?? null,
     userfields: await client.getUserfields(),
-    locations: locations.length,
+    locations,
+    newProductLocationId: null,
     units: units.length,
   });
   let fixes = pendingFixes(evaluateCheckup(await checkupInput())).filter((f) => f.kind === 'createUserfields');
@@ -86,7 +87,12 @@ async function main() {
   check(Array.isArray(before), `${before.length} line(s) in list #${listId}`);
 
   console.log('3. Creating a test product + barcode');
-  const { locationId, quId } = productPresets(userSettings, locations, units);
+  // Preferred location (« Emplacement des nouveaux produits »): the last one, so it differs from the preset when possible.
+  const preferred = locations[locations.length - 1]?.id ?? null;
+  const preset = productPresets(userSettings, locations, units);
+  check(productPresets(userSettings, locations, units, -42).locationId === preset.locationId, 'unknown preferred location → Grocy preset');
+  const { locationId, quId } = productPresets(userSettings, locations, units, preferred);
+  check(locationId === preferred, `preferred location #${preferred} used`);
   if (locationId === null || quId === null) throw new Error('No location / quantity unit in Grocy');
   const stamp = Date.now();
   const name = `ZZ Test courses ${stamp}`;
@@ -95,6 +101,7 @@ async function main() {
   await client.addBarcode(productId, barcode);
   const byBarcode = await client.getProductByBarcode(barcode);
   check(byBarcode?.product.id === productId, 'product found by barcode');
+  check(byBarcode?.product.location_id === locationId, 'product created in the preferred location');
   const unknown = await client.getProductByBarcode('0000000000017');
   check(unknown === null, 'unknown barcode → null (no error)');
 
