@@ -1,10 +1,10 @@
-import type { GrocyError, NamedEntity } from '../api/grocy';
+import { UF, type GrocyError, type NamedEntity } from '../api/grocy';
 
 /** Userfields the app needs on Grocy's `shopping_list` entity. */
 export const APP_USERFIELDS = [
-  { name: 'appprix', caption: 'Prix payé (app)', type: 'number-decimal' },
-  { name: 'appdlc', caption: 'DLC (app)', type: 'date' },
-  { name: 'apprayon', caption: 'Rayon (app)', type: 'number-integral' },
+  { name: UF.price, caption: 'Prix payé (app)', type: 'number-decimal' },
+  { name: UF.bestBefore, caption: 'DLC (app)', type: 'date' },
+  { name: UF.aisle, caption: 'Rayon (app)', type: 'number-integral' },
 ] as const;
 
 export type AppUserfield = (typeof APP_USERFIELDS)[number];

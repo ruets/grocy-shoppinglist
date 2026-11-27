@@ -12,6 +12,9 @@ const line = (p: Partial<ShoppingLine>): ShoppingLine => ({
   product_name: 'P',
   last_price: null,
   product_group_name: null,
+  paid_price: null,
+  best_before: null,
+  aisle_id: null,
   ...p,
 });
 

@@ -57,6 +57,19 @@ export interface ShoppingLine {
   /** Last purchase price per stock unit (null if unknown). */
   last_price: number | null;
   product_group_name: string | null;
+  /** « Prix payé (app) » userfield: price paid per stock unit. */
+  paid_price: number | null;
+  /** « DLC (app) » userfield, YYYY-MM-DD. */
+  best_before: string | null;
+  /** « Rayon (app) » userfield: product group id (off-stock items). */
+  aisle_id: number | null;
+}
+
+export interface Userfield {
+  id: number;
+  entity: string;
+  name: string;
+  type: string;
 }
 
 export interface BarcodeProductDetails {
@@ -146,8 +159,30 @@ function normLine(l: any): ShoppingLine {
     product_name: l.product_name ? String(l.product_name) : null,
     last_price: toNum(l.price),
     product_group_name: l.product_group_name ? String(l.product_group_name) : null,
+    paid_price: null,
+    best_before: null,
+    aisle_id: null,
   };
 }
+
+function normDate(v: unknown): string | null {
+  const m = typeof v === 'string' ? /^(\d{4}-\d{2}-\d{2})/.exec(v) : null;
+  return m ? m[1] : null;
+}
+
+/** Reads the app's userfields from an `objects/shopping_list` row; bad values → null. */
+function lineFields(uf: any): Pick<ShoppingLine, 'paid_price' | 'best_before' | 'aisle_id'> {
+  const price = toNum(uf?.[UF.price]);
+  const aisle = toNum(uf?.[UF.aisle]);
+  return {
+    paid_price: price !== null && price >= 0 ? price : null,
+    best_before: normDate(uf?.[UF.bestBefore]),
+    aisle_id: aisle !== null && Number.isInteger(aisle) ? aisle : null,
+  };
+}
+
+/** Userfield names on the `shopping_list` entity (see logic/checkup APP_USERFIELDS). */
+export const UF = { price: 'appprix', bestBefore: 'appdlc', aisle: 'apprayon' } as const;
 
 export function normalizeBaseUrl(raw: string): string {
   let url = raw.trim();
@@ -282,8 +317,51 @@ export class GrocyClient {
   async getShoppingLines(shoppingListId: number): Promise<ShoppingLine[]> {
     // query[]=shopping_list_id=<id>, URL-encoded
     const q = `query%5B%5D=shopping_list_id%3D${encodeURIComponent(String(shoppingListId))}`;
-    const rows = await this.request<any[]>('GET', `/objects/uihelper_shopping_list?${q}`);
-    return rows.map(normLine);
+    // The uihelper view has product names/prices but no userfields; the raw
+    // table has userfields only. Fetch both and merge by id.
+    const [rows, raw] = await Promise.all([
+      this.request<any[]>('GET', `/objects/uihelper_shopping_list?${q}`),
+      this.request<any[]>('GET', `/objects/shopping_list?${q}`),
+    ]);
+    const fields = new Map<number, any>((raw ?? []).map((r) => [toInt(r.id), r.userfields]));
+    return rows.map((r) => {
+      const line = normLine(r);
+      return { ...line, ...lineFields(fields.get(line.id)) };
+    });
+  }
+
+  /** Sets the app's userfields on a line; only the given keys are sent, null → ''. */
+  setLineFields(
+    lineId: number,
+    v: { paidPrice?: number | null; bestBefore?: string | null; aisleId?: number | null },
+  ): Promise<void> {
+    const body: Record<string, string> = {};
+    const str = (x: number | string | null) => (x === null ? '' : String(x));
+    if (v.paidPrice !== undefined) body[UF.price] = str(v.paidPrice);
+    if (v.bestBefore !== undefined) body[UF.bestBefore] = str(v.bestBefore);
+    if (v.aisleId !== undefined) body[UF.aisle] = str(v.aisleId);
+    return this.request('PUT', `/userfields/shopping_list/${lineId}`, body);
+  }
+
+  async getUserfields(): Promise<Userfield[]> {
+    const rows = await this.request<any[]>('GET', '/objects/userfields');
+    return (rows ?? []).map((r) => ({ id: toInt(r.id), entity: String(r.entity), name: String(r.name), type: String(r.type) }));
+  }
+
+  async createUserfield(f: { name: string; caption: string; type: string }): Promise<number> {
+    const res = await this.request<{ created_object_id: number | string }>('POST', '/objects/userfields', {
+      entity: 'shopping_list',
+      name: f.name,
+      caption: f.caption,
+      type: f.type,
+      show_as_column_in_tables: 0,
+    });
+    return toInt(res.created_object_id);
+  }
+
+  async createShoppingList(name: string): Promise<number> {
+    const res = await this.request<{ created_object_id: number | string }>('POST', '/objects/shopping_lists', { name });
+    return toInt(res.created_object_id);
   }
 
   async addShoppingLine(line: NewShoppingLine): Promise<number> {
