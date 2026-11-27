@@ -1,7 +1,7 @@
 import type { NamedEntity, ShoppingLine } from '../api/grocy';
 
 export const NO_GROUP = 'Sans rayon';
-export const FREE_TEXT = 'Texte libre';
+export const OFF_STOCK = 'Articles hors stock';
 
 export interface LineSection {
   title: string;
@@ -14,8 +14,8 @@ export function lineLabel(l: ShoppingLine): string {
 
 /**
  * Groups by aisle (product group) sorted alphabetically, then "no aisle",
- * then "free text". Off-stock items (no product) go into their « Rayon (app) »
- * aisle when it still exists, otherwise into "free text". Within each group:
+ * then off-stock items without aisle. Off-stock items (no product) go into their « Rayon (app) »
+ * aisle when it still exists, otherwise into that last section. Within each group:
  * unchecked first, then by name.
  */
 export function groupLines(lines: ShoppingLine[], aisleNames: Map<number, string>): LineSection[] {
@@ -40,7 +40,7 @@ export function groupLines(lines: ShoppingLine[], aisleNames: Map<number, string
     .sort((a, b) => a.localeCompare(b, 'fr'))
     .map((title) => ({ title, data: sortLines(groups.get(title)!) }));
   if (noGroup.length) sections.push({ title: NO_GROUP, data: sortLines(noGroup) });
-  if (freeText.length) sections.push({ title: FREE_TEXT, data: sortLines(freeText) });
+  if (freeText.length) sections.push({ title: OFF_STOCK, data: sortLines(freeText) });
   return sections;
 }
 

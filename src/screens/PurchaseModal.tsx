@@ -126,7 +126,7 @@ export function PurchaseModal(props: {
     }
   };
 
-  /** Saves this line, then creates a second checked line of the same product at the same price. */
+  /** Saves this line, then creates a second checked line of the same item at the same price. */
   const otherPrice = async () => {
     if (t.kind !== "line") return;
     setSaving(true);
@@ -135,7 +135,7 @@ export function PurchaseModal(props: {
       await markPurchased(t.line.id, {
         amount: price.qty,
         unitPrice,
-        bestBefore: parsedDate,
+        bestBefore: free ? null : parsedDate,
       });
       const id = await addPriceLine(t.line.id, {
         amount: 1,
@@ -181,12 +181,12 @@ export function PurchaseModal(props: {
             loading={saving}
             disabled={!(price.qty > 0) || (!free && dateInvalid)}
           />
-          {t.kind === "line" && !free ? (
+          {t.kind === "line" ? (
             <BigButton
               title="＋ Autre prix"
               variant="secondary"
               onPress={otherPrice}
-              disabled={saving || !(price.qty > 0) || dateInvalid}
+              disabled={saving || !(price.qty > 0) || (!free && dateInvalid)}
             />
           ) : null}
           {alreadyDone ? (

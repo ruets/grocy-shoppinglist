@@ -68,7 +68,7 @@
 - The Doctor only **adds** (or selects an existing list, after asking); it never edits or deletes anything in Grocy.
 
 ### 4. Off-stock items (delivery 2)
-- Off-stock item = free-text line (name in the note) with optional « Rayon (app) », grouped under its aisle (or « Texte libre » without one).
+- Off-stock item = free-text line (name in the note) with optional « Rayon (app) », grouped under its aisle (or « Articles hors stock » without one). « ＋ Autre prix » works for it too (same name and aisle, no date), and it shows « sans prix » like a product when it has no price.
 - Price and quantity as for products; counted in the totals.
 - At checkout its line is deleted, no stock. Nothing is kept afterwards.
 

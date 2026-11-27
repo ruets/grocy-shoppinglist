@@ -20,6 +20,7 @@ import {
   type Fix,
 } from '../logic/checkup';
 import { makeMoneyFormatter } from '../logic/numbers';
+import { priceLineFrom } from '../logic/priceLine';
 import { loadSettings, saveSettings, type AppSettings } from '../storage/settings';
 import {
   clearLegacyLineData,
@@ -104,7 +105,7 @@ interface State {
   markPurchased: (lineId: number, p: PurchaseInput) => Promise<void>;
   unmark: (lineId: number) => Promise<void>;
   purchaseOffList: (productId: number, p: PurchaseInput) => Promise<void>;
-  /** « Autre prix »: new checked line of the same product; returns its id. */
+  /** « Autre prix »: new checked line of the same item (product or off-stock); returns its id. */
   addPriceLine: (lineId: number, p: PurchaseInput) => Promise<number>;
   createProduct: (name: string, barcode?: string) => Promise<number>;
   addBarcode: (productId: number, barcode: string) => Promise<void>;
@@ -412,15 +413,9 @@ export const useStore = create<State>((set, get) => {
         const client = requireClient();
         const src = get().lines.find((l) => l.id === lineId);
         if (!src) throw new Error('Article introuvable');
-        const id = await client.addShoppingLine({
-          shopping_list_id: src.shopping_list_id,
-          product_id: src.product_id,
-          amount: p.amount,
-          qu_id: src.qu_id,
-          note: '',
-          done: true,
-        });
-        await client.setLineFields(id, { paidPrice: p.unitPrice, bestBefore: p.bestBefore });
+        const { line, fields } = priceLineFrom(src, p);
+        const id = await client.addShoppingLine(line);
+        await client.setLineFields(id, fields);
         await get().refreshLines({ silent: true });
         return id;
       }),

@@ -32,7 +32,7 @@ is enough (with `tls internal`, install Caddy's local CA on the phone). Works on
 
 ## Usage
 
-- **Checkbox** on the left of an item → purchase modal: amount, unit price ↔ line total (linked both ways; the highlighted field is the one kept when the amount changes), optional best-before date. « Retirer du panier » unchecks it. « ＋ Autre prix » saves the line and adds a second checked line of the same product (e.g. two packs at different prices); each line becomes its own stock entry.
+- **Checkbox** on the left of an item → purchase modal: amount, unit price ↔ line total (linked both ways; the highlighted field is the one kept when the amount changes), optional best-before date. « Retirer du panier » unchecks it. « ＋ Autre prix » saves the line and adds a second checked line of the same item (e.g. two packs at different prices); for a Grocy product each line becomes its own stock entry, an off-stock item keeps its name and aisle.
 - **+ Ajouter**: with an empty search, every Grocy product is listed by aisle; type to search (accent-insensitive). A name not found → « Créer dans Grocy » (new product) or « Ajouter hors stock ».
 - **Off-stock items** (« hors stock »): items that never go to Grocy's stock (sweets, flowers…). They are free-text lines on the Grocy list (name in the note) with an optional aisle stored in « Rayon (app) », a quantity and a price counted in the totals, no best-before date; checkout just deletes them.
 - **Item name** → edit / delete (product, or off-stock name / aisle / quantity).

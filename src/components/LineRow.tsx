@@ -24,7 +24,7 @@ export const LineRow = React.memo(function LineRow(props: {
     lastPrice: line.last_price,
     paidUnitPrice: props.paidUnitPrice,
   });
-  const priceText = price.value === null ? (free ? '' : 'sans prix') : `${price.estimated ? '~' : ''}${props.money(price.value)}`;
+  const priceText = price.value === null ? 'sans prix' : `${price.estimated ? '~' : ''}${props.money(price.value)}`;
 
   return (
     <View

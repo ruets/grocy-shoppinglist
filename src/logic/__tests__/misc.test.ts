@@ -1,7 +1,7 @@
 import type { ShoppingLine } from '../../api/grocy';
 import { normalizeBaseUrl } from '../../api/grocy';
 import { formatBestBefore, NEVER_EXPIRES, parseUserDate, productDefaultBestBefore } from '../dates';
-import { FREE_TEXT, groupLines, NO_GROUP } from '../grouping';
+import { groupLines, NO_GROUP, OFF_STOCK } from '../grouping';
 import { decideScan } from '../scan';
 import { searchByName } from '../text';
 
@@ -40,7 +40,7 @@ describe('groupLines', () => {
       line({ id: 3 }),
       line({ id: 4, product_group_name: 'Boulangerie' }),
     ], new Map());
-    expect(s.map((x) => x.title)).toEqual(['Boulangerie', 'Fruits', NO_GROUP, FREE_TEXT]);
+    expect(s.map((x) => x.title)).toEqual(['Boulangerie', 'Fruits', NO_GROUP, OFF_STOCK]);
   });
 
   const aisles = new Map([[3, 'Frais']]);
@@ -58,7 +58,7 @@ describe('groupLines', () => {
       [line({ id: 1, product_id: null, note: 'A' }), line({ id: 2, product_id: null, note: 'B', aisle_id: 99 }), line({ id: 3, product_group_name: 'Frais' })],
       aisles,
     );
-    expect(s.map((x) => x.title)).toEqual(['Frais', FREE_TEXT]);
+    expect(s.map((x) => x.title)).toEqual(['Frais', 'Articles hors stock']);
     expect(s[1].data.map((l) => l.id)).toEqual([1, 2]);
   });
 });
