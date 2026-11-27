@@ -24,7 +24,6 @@ const waitModalDismiss = () => new Promise((r) => setTimeout(r, Platform.OS === 
 export function ListScreen(props: { onOpenSettings: () => void }) {
   const c = useColors();
   const lines = useStore((s) => s.lines);
-  const local = useStore((s) => s.local);
   const meta = useStore((s) => s.meta);
   const money = useStore((s) => s.money);
   const settings = useStore((s) => s.settings);
@@ -70,10 +69,10 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
           done: l.done,
           freeText: l.product_id === null,
           lastPrice: l.last_price,
-          paidUnitPrice: local[l.id]?.paidUnitPrice ?? null,
+          paidUnitPrice: l.paid_price,
         })),
       ),
-    [lines, local],
+    [lines],
   );
   const listName = meta?.shoppingLists.find((l) => l.id === settings.shoppingListId)?.name ?? 'Courses';
   const doneCount = lines.filter((l) => l.done).length;
@@ -181,7 +180,7 @@ export function ListScreen(props: { onOpenSettings: () => void }) {
           <LineRow
             line={item}
             unitName={stockUnitName(meta, item.product_id, item.amount)}
-            paidUnitPrice={local[item.id]?.paidUnitPrice ?? null}
+            paidUnitPrice={item.paid_price}
             money={money}
             onCheck={onCheck}
             onEdit={onEdit}

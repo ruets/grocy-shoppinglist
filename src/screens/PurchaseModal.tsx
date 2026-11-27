@@ -16,13 +16,17 @@ export type PurchaseTarget =
 export function PurchaseModal(props: { target: PurchaseTarget | null; onClose: () => void }) {
   const c = useColors();
   const meta = useStore((s) => s.meta);
-  const local = useStore((s) => s.local);
   const money = useStore((s) => s.money);
   const markPurchased = useStore((s) => s.markPurchased);
   const unmark = useStore((s) => s.unmark);
   const purchaseOffList = useStore((s) => s.purchaseOffList);
+  const addPriceLine = useStore((s) => s.addPriceLine);
 
-  const t = props.target;
+  // « Autre prix » switches the modal to the newly created line.
+  // Tied to the target it was made from, so a new target drops it.
+  const [override, setOverrideFor] = React.useState<{ from: PurchaseTarget | null; t: PurchaseTarget } | null>(null);
+  const setOverride = (next: PurchaseTarget) => setOverrideFor({ from: props.target, t: next });
+  const t = override && override.from === props.target ? override.t : props.target;
   const productId = t ? (t.kind === 'line' ? t.line.product_id : t.productId) : null;
   const free = t?.kind === 'line' && t.line.product_id === null;
 
@@ -36,9 +40,8 @@ export function PurchaseModal(props: { target: PurchaseTarget | null; onClose: (
     let unit: number | null = null;
     let bb: string | null = null;
     if (t.kind === 'line') {
-      const l = local[t.line.id];
-      unit = l?.paidUnitPrice ?? t.line.last_price;
-      bb = l?.bestBefore ?? null;
+      unit = t.line.paid_price ?? t.line.last_price;
+      bb = t.line.best_before;
     } else {
       unit = t.lastPrice;
     }
@@ -78,6 +81,24 @@ export function PurchaseModal(props: { target: PurchaseTarget | null; onClose: (
     }
   };
 
+  /** Saves this line, then creates a second checked line of the same product at the same price. */
+  const otherPrice = async () => {
+    if (t.kind !== 'line') return;
+    setSaving(true);
+    try {
+      const unitPrice = effectiveUnitPrice(price);
+      await markPurchased(t.line.id, { amount: price.qty, unitPrice, bestBefore: parsedDate });
+      const id = await addPriceLine(t.line.id, { amount: 1, unitPrice, bestBefore: null });
+      const line = useStore.getState().lines.find((l) => l.id === id);
+      if (line) setOverride({ kind: 'line', line, amount: 1 });
+      else props.onClose();
+    } catch {
+      /* toast */
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const removeFromCart = async () => {
     if (t.kind !== 'line') return;
     setSaving(true);
@@ -107,6 +128,14 @@ export function PurchaseModal(props: { target: PurchaseTarget | null; onClose: (
             loading={saving}
             disabled={(!free && !(price.qty > 0)) || dateInvalid}
           />
+          {t.kind === 'line' && !free ? (
+            <BigButton
+              title="＋ Autre prix"
+              variant="secondary"
+              onPress={otherPrice}
+              disabled={saving || !(price.qty > 0) || dateInvalid}
+            />
+          ) : null}
           {alreadyDone ? (
             <BigButton title="Retirer du panier" variant="secondary" onPress={removeFromCart} disabled={saving} />
           ) : null}
