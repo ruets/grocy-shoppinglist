@@ -1,7 +1,16 @@
 # Courses Grocy
 
 Mobile shopping list (Expo / React Native, TypeScript) connected to a **Grocy 4.7.x** instance.
-Runs in **Expo Go** (iPhone / Android) with no native build. The app UI is in French, with big buttons and automatic dark mode.
+Runs in **Expo Go** (iPhone / Android) with no native build, or as an Android APK from the [releases](https://github.com/ruets/grocy-shoppinglist/releases). French or English UI (phone language), big buttons, automatic dark mode.
+
+## How it works
+
+Everything lives in Grocy: the list, what is in the cart, prices paid and best-before dates. Several phones therefore see the same cart (20 s auto refresh, last write wins). The phone only keeps its settings and a per-line "already stocked" marker.
+
+1. **Settings**: Grocy URL, API key, the shopping list, optionally a location for new products.
+2. **Grocy check** at every start: server, key, version, list, the app's three fields, locations and units. If something is missing, the app shows what it would do and waits for « Réparer » (see [Grocy checkup](#grocy-checkup--grocy-doctor-)).
+3. **Shopping**: tick items into the cart with amount, price and optionally a date; add Grocy products, new products or off-stock items; scan barcodes.
+4. **Checkout** (« Valider »): missing best-before dates are collected, then every checked product goes to Grocy's stock (amount, price, date, store) and its line is deleted.
 
 ## Getting started
 
@@ -10,7 +19,7 @@ npm install
 npx expo start
 ```
 
-Scan the QR code with **Expo Go** (Android) or the Camera app (iPhone). The phone must reach the dev machine (same Wi-Fi), or use `npx expo start --tunnel`.
+Scan the QR code with **Expo Go** (Android) or the Camera app (iPhone). The phone must reach the dev machine (same Wi-Fi), or use `npx expo start --tunnel`. On Android you can instead install the APK of the latest release.
 
 ## Grocy API key
 
@@ -36,11 +45,11 @@ is enough (with `tls internal`, install Caddy's local CA on the phone). Works on
 
 - **Checkbox** on the left of an item → purchase modal: amount, unit price ↔ line total (linked both ways; the highlighted field is the one kept when the amount changes), optional best-before date. « Retirer du panier » unchecks it. « ＋ Autre prix » saves the line and adds a second checked line of the same item (e.g. two packs at different prices); for a Grocy product each line becomes its own stock entry, an off-stock item keeps its name and aisle.
 - **+ Ajouter**: with an empty search, every Grocy product is listed by aisle; type to search (accent-insensitive). A name not found → « Créer dans Grocy » (new product) or « Ajouter hors stock ».
-- **Off-stock items** (« hors stock »): items that never go to Grocy's stock (sweets, flowers…). They are free-text lines on the Grocy list (name in the note) with an optional aisle stored in « Rayon (app) », a quantity and a price counted in the totals, no best-before date; checkout just deletes them.
+- **Off-stock items** (« hors stock »): items that never go to Grocy's stock (sweets, flowers…). They are free-text lines on the Grocy list (name in the note) with an optional aisle stored in the `appaisle` field, a quantity and a price counted in the totals, no best-before date; checkout just deletes them.
 - **Item name** → edit / delete (product, or off-stock name / aisle / quantity).
 - **Scanner**: EAN-13/8, UPC-A/E, Code128, with manual entry as a fallback. Unknown barcode → associate it with an existing product (list items first) or create a new product.
 - **Valider** (checkout): every checked product needs a best-before date. Missing dates are collected in a guided step (quick entry `1203` = 12/03, « Ne périme pas » = never expires, scan to jump to a product). Then each checked item is added to stock (amount, price, best-before date, store) and its line is deleted; free-text lines are just deleted.
-- Header totals: **Panier** (cart: entered prices, otherwise estimate), **Reste** (remaining: last price), **Liste** (list). `~` = estimate, `—` = no price known.
+- Header totals: **Panier** (cart: entered prices, otherwise estimate), **Reste** (remaining: last price), **Liste** (list). `~` = estimate; « sans prix » (no price) = no price known, with the count of such items under the total.
 
 ### Data stored in Grocy
 
