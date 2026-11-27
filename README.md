@@ -15,6 +15,8 @@ Scan the QR code with **Expo Go** (Android) or the Camera app (iPhone). The phon
 ## Grocy API key
 
 In Grocy: user menu (top right) → **Manage API keys** → **Add**. Copy the key, then in the app: **Réglages** (settings) → URL (e.g. `https://grocy.home.lan`, without `/api`) + key → **Tester la connexion** (test connection) → pick the list → **Enregistrer** (save).
+
+Optional: **Emplacement des nouveaux produits** (location for new products), e.g. a « À ranger » location in Grocy. Every product created from the app (add screen, unknown barcode) goes there, to be moved later in Grocy. « Préréglage Grocy » keeps Grocy's own default (Settings → Product presets). If the chosen location is deleted in Grocy, products go to the default again and the checkup shows a warning.
 The URL and key are stored in the device keychain via `expo-secure-store`.
 
 ## HTTP vs HTTPS (iOS)
@@ -56,7 +58,7 @@ The phone only keeps a per-line "already stocked" marker (AsyncStorage, 7 days) 
 
 ### Grocy checkup (« Grocy Doctor »)
 
-At startup the app checks Grocy (server and API key, version, selected shopping list, the three fields above, locations and units). If something is missing it shows « Vérification de Grocy » with the exact list of what it would do, and changes nothing until « Réparer » is tapped. It only adds (fields, a « Liste de courses » list when there is none) or selects an existing list; it never edits or deletes anything in Grocy. A field with the app's name but another type is reported, to be fixed by hand. The « Grocy Doctor » button in Settings opens the same screen at any time.
+At startup the app checks Grocy (server and API key, version, selected shopping list, the three fields above, locations and units, the location for new products). If something is missing it shows « Vérification de Grocy » with the exact list of what it would do, and changes nothing until « Réparer » is tapped. It only adds (fields, a « Liste de courses » list when there is none) or selects an existing list; it never edits or deletes anything in Grocy. A field with the app's name but another type is reported, to be fixed by hand. The « Grocy Doctor » button in Settings opens the same screen at any time.
 
 ## Development
 

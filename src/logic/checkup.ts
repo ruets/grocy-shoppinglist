@@ -21,7 +21,7 @@ export type Fix =
   | { kind: 'openSettings' };
 
 export interface CheckResult {
-  id: 'server' | 'version' | 'list' | 'userfields' | 'meta';
+  id: 'server' | 'version' | 'list' | 'userfields' | 'meta' | 'newProductLocation';
   status: CheckStatus;
   label: string;
   detail?: string;
@@ -33,7 +33,9 @@ export interface CheckupInput {
   lists: NamedEntity[];
   selectedListId: number | null;
   userfields: { entity: string; name: string; type: string }[];
-  locations: number;
+  locations: NamedEntity[];
+  /** « Emplacement des nouveaux produits » setting (null = Grocy preset). */
+  newProductLocationId: number | null;
   units: number;
 }
 
@@ -105,7 +107,7 @@ export function evaluateCheckup(input: CheckupInput): CheckResult[] {
   }
 
   results.push(
-    input.locations > 0 && input.units > 0
+    input.locations.length > 0 && input.units > 0
       ? { id: 'meta', status: 'ok', label: 'Emplacements et unités' }
       : {
           id: 'meta',
@@ -114,6 +116,21 @@ export function evaluateCheckup(input: CheckupInput): CheckResult[] {
           detail: 'Impossible de créer des produits depuis l’app tant qu’il n’y en a pas dans Grocy.',
         },
   );
+
+  if (input.newProductLocationId !== null) {
+    const loc = input.locations.find((l) => l.id === input.newProductLocationId);
+    results.push(
+      loc
+        ? { id: 'newProductLocation', status: 'ok', label: `Nouveaux produits : « ${loc.name} »` }
+        : {
+            id: 'newProductLocation',
+            status: 'warning',
+            label: 'Emplacement des nouveaux produits introuvable',
+            detail:
+              'Les nouveaux produits iront dans l’emplacement par défaut de Grocy. Choisissez-en un autre dans les Réglages.',
+          },
+    );
+  }
 
   return results;
 }

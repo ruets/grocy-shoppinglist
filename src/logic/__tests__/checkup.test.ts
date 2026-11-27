@@ -15,7 +15,11 @@ const input = (p: Partial<CheckupInput> = {}): CheckupInput => ({
   lists: [{ id: 1, name: 'Courses' }],
   selectedListId: 1,
   userfields: allFields,
-  locations: 2,
+  locations: [
+    { id: 1, name: 'Frigo' },
+    { id: 4, name: 'À ranger' },
+  ],
+  newProductLocationId: null,
   units: 3,
   ...p,
 });
@@ -85,9 +89,28 @@ describe('evaluateCheckup', () => {
   });
 
   it('no location or unit → warning', () => {
-    const r = evaluateCheckup(input({ locations: 0 }));
+    const r = evaluateCheckup(input({ locations: [] }));
     expect(byId(r, 'meta').status).toBe('warning');
     expect(isBlocking(r)).toBe(false);
+  });
+
+  it('no location chosen for new products → no row', () => {
+    expect(evaluateCheckup(input()).some((c) => c.id === 'newProductLocation')).toBe(false);
+  });
+
+  it('chosen location for new products → ok row with its name', () => {
+    const r = evaluateCheckup(input({ newProductLocationId: 4 }));
+    expect(byId(r, 'newProductLocation')).toMatchObject({ status: 'ok', label: 'Nouveaux produits : « À ranger »' });
+  });
+
+  it('chosen location gone → warning, not blocking, nothing to fix', () => {
+    const r = evaluateCheckup(input({ newProductLocationId: 99 }));
+    expect(byId(r, 'newProductLocation')).toMatchObject({
+      status: 'warning',
+      label: 'Emplacement des nouveaux produits introuvable',
+    });
+    expect(isBlocking(r)).toBe(false);
+    expect(pendingFixes(r)).toEqual([]);
   });
 
   it('server down → single error with openSettings', () => {
