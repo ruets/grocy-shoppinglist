@@ -12,7 +12,6 @@ import {
 } from '../api/grocy';
 import { runCheckout, type CheckoutResult } from '../logic/checkout';
 import {
-  DEFAULT_LIST_NAME,
   evaluateCheckup,
   isBlocking,
   type CheckResult,
@@ -224,11 +223,12 @@ export const useStore = create<State>((set, get) => {
       let input: CheckupInput;
       try {
         const info = await client.getSystemInfo();
-        const [lists, userfields, locations, units] = await Promise.all([
+        const [lists, userfields, locations, units, config] = await Promise.all([
           client.getShoppingLists(),
           client.getUserfields(),
           client.getLocations(),
           client.getQuantityUnits(),
+          client.getSystemConfig(),
         ]);
         input = {
           server: { ok: true, version: info.grocy_version?.Version ?? '' },
@@ -238,10 +238,11 @@ export const useStore = create<State>((set, get) => {
           locations,
           newProductLocationId: get().settings.newProductLocationId,
           units: units.length,
+          grocyLocale: typeof config.LOCALE === 'string' ? config.LOCALE : 'en',
         };
       } catch (e) {
         const error = e instanceof GrocyError ? e : new GrocyError(errMsg(e), null, 'http');
-        input = { server: { ok: false, error }, lists: [], selectedListId: null, userfields: [], locations: [], newProductLocationId: null, units: 0 };
+        input = { server: { ok: false, error }, lists: [], selectedListId: null, userfields: [], locations: [], newProductLocationId: null, units: 0, grocyLocale: 'en' };
       }
       const results = evaluateCheckup(input);
       set({ checkup: results });
@@ -259,8 +260,10 @@ export const useStore = create<State>((set, get) => {
         for (const fix of fixes) {
           if (fix.kind === 'createUserfields') {
             for (const f of fix.fields) await client.createUserfield(f);
+          } else if (fix.kind === 'renameUserfields') {
+            for (const f of fix.fields) await client.setUserfieldCaption(f.id, f.caption);
           } else if (fix.kind === 'createList') {
-            await selectList(await client.createShoppingList(DEFAULT_LIST_NAME));
+            await selectList(await client.createShoppingList(fix.name));
           } else if (fix.kind === 'selectList') {
             await selectList(fix.listId);
           }

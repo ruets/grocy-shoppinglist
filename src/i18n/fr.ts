@@ -34,6 +34,7 @@ export const fr = {
     wrongTypeHint: '. Corrigez ou supprimez ce champ dans Grocy (Gérer les données → Champs personnalisés).',
     fieldsMissing: 'Champs de l’app manquants',
     fieldsOk: 'Champs de l’app',
+    captionsOtherLanguage: 'Libellés des champs dans une autre langue que Grocy',
     metaOk: 'Emplacements et unités',
     metaMissing: 'Emplacement ou unité manquant',
     metaMissingHint: 'Impossible de créer des produits depuis l’app tant qu’il n’y en a pas dans Grocy.',
@@ -45,6 +46,7 @@ export const fr = {
     fixSelectList: (name: string) => `Utiliser la liste « ${name} »`,
     fixCreateField: (caption: string) => `Créer le champ ${caption}`,
     fixCreateFields: (captions: string) => `Créer les champs ${captions}`,
+    fixRenameFields: (captions: string) => `Renommer les champs en ${captions}`,
     fixOpenSettings: 'Ouvrir les réglages',
   },
   grouping: {
@@ -111,6 +113,7 @@ export const fr = {
     checking: 'Vérification…',
     willDo: 'Ce qui sera fait',
     onlyAdds: 'Rien n’est modifié ni supprimé dans Grocy : l’app ne fait qu’ajouter.',
+    captionsOnly: 'Seuls les libellés des champs changent : leurs valeurs restent. Rien n’est supprimé dans Grocy.',
     repair: 'Réparer',
     rerun: 'Relancer',
     continue: 'Continuer',
@@ -198,7 +201,7 @@ export const fr = {
     newLocationHint: 'Les produits créés depuis l’app y sont rangés, à déplacer ensuite dans Grocy.',
     diagnostic: 'Diagnostic',
     doctor: 'Grocy Doctor',
-    doctorHint: 'Vérifie que Grocy a tout ce qu’il faut à l’app, et propose de l’ajouter.',
+    doctorHint: 'Vérifie que Grocy a tout ce qu’il faut à l’app, et propose de corriger.',
   },
   common: {
     loading: 'Chargement de Grocy…',

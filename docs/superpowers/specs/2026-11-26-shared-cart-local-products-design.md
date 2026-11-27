@@ -85,7 +85,7 @@
 ### 7. Internationalisation (delivery 4)
 - All UI strings in translation files, French + English; follows the phone language, English fallback.
 - Number, price and date formats follow the language; date input keeps the current shortcuts.
-- What the app creates in Grocy (userfield captions, default list « Shopping list ») is in English whatever the language.
+- What the app writes into Grocy (userfield captions, the list it creates) follows Grocy's own language (`LOCALE`): French when it starts with `fr` (« Prix payé (app) », « DLC (app) », « Rayon (app) », « Liste de courses »), English otherwise. When the app's captions are in another language, the checkup shows a non-blocking warning and « Réparer » renames the captions only (names and values stay; a caption the user wrote is left alone).
 
 ## Unchanged
 Scanning, unknown barcode → associate/create, guided dates at checkout, 20 s auto refresh, Expo Go only, no new native dependency.

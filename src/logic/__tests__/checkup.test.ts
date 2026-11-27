@@ -1,6 +1,7 @@
 import { GrocyError } from '../../api/grocy';
 import {
-  APP_USERFIELDS,
+  appUserfields,
+  defaultListName,
   describeFix,
   evaluateCheckup,
   isBlocking,
@@ -8,7 +9,8 @@ import {
   type CheckupInput,
 } from '../checkup';
 
-const allFields = APP_USERFIELDS.map((f) => ({ entity: 'shopping_list', name: f.name, type: f.type }));
+const EN = appUserfields('en');
+const allFields = EN.map((f, i) => ({ id: 20 + i, entity: 'shopping_list', name: f.name, type: f.type, caption: f.caption }));
 
 const input = (p: Partial<CheckupInput> = {}): CheckupInput => ({
   server: { ok: true, version: '4.7.1' },
@@ -21,6 +23,7 @@ const input = (p: Partial<CheckupInput> = {}): CheckupInput => ({
   ],
   newProductLocationId: null,
   units: 3,
+  grocyLocale: 'en',
   ...p,
 });
 
@@ -43,7 +46,7 @@ describe('evaluateCheckup', () => {
   it('no shopping list → missing, fix = create one', () => {
     const r = evaluateCheckup(input({ lists: [], selectedListId: null }));
     expect(byId(r, 'list').status).toBe('missing');
-    expect(pendingFixes(r)).toContainEqual({ kind: 'createList' });
+    expect(pendingFixes(r)).toContainEqual({ kind: 'createList', name: 'Shopping list' });
     expect(isBlocking(r)).toBe(true);
   });
 
@@ -62,7 +65,7 @@ describe('evaluateCheckup', () => {
     const r = evaluateCheckup(input({ userfields: allFields.filter((f) => f.name !== 'appbestbefore') }));
     expect(byId(r, 'userfields').status).toBe('missing');
     const fix = pendingFixes(r).find((f) => f.kind === 'createUserfields');
-    expect(fix).toEqual({ kind: 'createUserfields', fields: APP_USERFIELDS.filter((f) => f.name === 'appbestbefore') });
+    expect(fix).toEqual({ kind: 'createUserfields', fields: EN.filter((f) => f.name === 'appbestbefore') });
   });
 
   it('field with the wrong type → error, no fix', () => {
@@ -122,6 +125,44 @@ describe('evaluateCheckup', () => {
     expect(isBlocking(r)).toBe(true);
   });
 
+  it('Grocy in French → new list and missing fields get French names', () => {
+    const r = evaluateCheckup(input({ grocyLocale: 'fr', lists: [], selectedListId: null, userfields: [] }));
+    expect(pendingFixes(r)).toEqual([
+      { kind: 'createList', name: 'Liste de courses' },
+      { kind: 'createUserfields', fields: appUserfields('fr') },
+    ]);
+  });
+
+  it('captions in another language than Grocy → warning, fix renames them', () => {
+    const r = evaluateCheckup(input({ grocyLocale: 'fr_FR' }));
+    expect(byId(r, 'userfields').status).toBe('warning');
+    expect(isBlocking(r)).toBe(false);
+    expect(pendingFixes(r)).toEqual([
+      {
+        kind: 'renameUserfields',
+        fields: [
+          { id: 20, name: 'appprice', caption: 'Prix payé (app)' },
+          { id: 21, name: 'appbestbefore', caption: 'DLC (app)' },
+          { id: 22, name: 'appaisle', caption: 'Rayon (app)' },
+        ],
+      },
+    ]);
+  });
+
+  it('a caption the user wrote is left alone', () => {
+    const fields = allFields.map((f) => (f.name === 'appprice' ? { ...f, caption: 'Mon prix' } : f));
+    const r = evaluateCheckup(input({ grocyLocale: 'fr', userfields: fields }));
+    const fix = pendingFixes(r).find((f) => f.kind === 'renameUserfields');
+    expect(fix && fix.kind === 'renameUserfields' && fix.fields.map((f) => f.name)).toEqual(['appbestbefore', 'appaisle']);
+  });
+
+  it('captions already in Grocy language → ok', () => {
+    const fr = appUserfields('fr').map((f, i) => ({ ...allFields[i], caption: f.caption }));
+    const r = evaluateCheckup(input({ grocyLocale: 'fr', userfields: fr }));
+    expect(byId(r, 'userfields').status).toBe('ok');
+    expect(pendingFixes(r)).toEqual([]);
+  });
+
   it('auth error → « Clé API refusée »', () => {
     const r = evaluateCheckup(input({ server: { ok: false, error: new GrocyError('x', 401, 'auth') } }));
     expect(r[0].label).toBe('Clé API refusée');
@@ -129,13 +170,24 @@ describe('evaluateCheckup', () => {
 });
 
 describe('describeFix', () => {
+  it('Grocy language: fr* → French, anything else → English', () => {
+    expect(defaultListName('fr')).toBe('Liste de courses');
+    expect(defaultListName('fr_CA')).toBe('Liste de courses');
+    expect(defaultListName('de')).toBe('Shopping list');
+    expect(defaultListName('')).toBe('Shopping list');
+    expect(appUserfields('fr').map((f) => f.caption)).toEqual(['Prix payé (app)', 'DLC (app)', 'Rayon (app)']);
+  });
+
   it('describes each fix in French', () => {
-    expect(describeFix({ kind: 'createList' })).toBe('Créer la liste « Shopping list »');
+    expect(describeFix({ kind: 'createList', name: 'Shopping list' })).toBe('Créer la liste « Shopping list »');
+    expect(
+      describeFix({ kind: 'renameUserfields', fields: [{ id: 1, name: 'appprice', caption: 'Prix payé (app)' }] }),
+    ).toBe('Renommer les champs en Prix payé (app)');
     expect(describeFix({ kind: 'selectList', listId: 4, listName: 'A' })).toBe('Utiliser la liste « A »');
-    expect(describeFix({ kind: 'createUserfields', fields: APP_USERFIELDS.slice(0, 2) })).toBe(
+    expect(describeFix({ kind: 'createUserfields', fields: EN.slice(0, 2) })).toBe(
       'Créer les champs Price paid (app), Best before (app)',
     );
-    expect(describeFix({ kind: 'createUserfields', fields: APP_USERFIELDS.slice(0, 1) })).toBe(
+    expect(describeFix({ kind: 'createUserfields', fields: EN.slice(0, 1) })).toBe(
       'Créer le champ Price paid (app)',
     );
   });

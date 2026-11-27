@@ -1,24 +1,56 @@
 import { UF, type GrocyError, type NamedEntity } from '../api/grocy';
 import { t } from '../i18n';
 
-/** Userfields the app needs on Grocy's `shopping_list` entity. Captions are stored in Grocy: English in every language. */
-export const APP_USERFIELDS = [
-  { name: UF.price, caption: 'Price paid (app)', type: 'number-decimal' },
-  { name: UF.bestBefore, caption: 'Best before (app)', type: 'date' },
-  { name: UF.aisle, caption: 'Aisle (app)', type: 'number-integral' },
+/**
+ * Texts the app writes into Grocy (field captions, default list name). They
+ * follow Grocy's own language (`LOCALE` in /system/config), not the phone's,
+ * so every phone agrees: French when it starts with `fr`, English otherwise.
+ */
+const GROCY_TEXTS = {
+  en: { price: 'Price paid (app)', bestBefore: 'Best before (app)', aisle: 'Aisle (app)', list: 'Shopping list' },
+  fr: { price: 'Prix payé (app)', bestBefore: 'DLC (app)', aisle: 'Rayon (app)', list: 'Liste de courses' },
+} as const;
+
+function grocyTexts(grocyLocale: string) {
+  return /^fr/i.test(grocyLocale) ? GROCY_TEXTS.fr : GROCY_TEXTS.en;
+}
+
+const FIELD_TYPES = [
+  { key: 'price', name: UF.price, type: 'number-decimal' },
+  { key: 'bestBefore', name: UF.bestBefore, type: 'date' },
+  { key: 'aisle', name: UF.aisle, type: 'number-integral' },
 ] as const;
 
-export type AppUserfield = (typeof APP_USERFIELDS)[number];
+export interface AppUserfield {
+  name: string;
+  caption: string;
+  type: string;
+}
+
+/** Userfields the app needs on Grocy's `shopping_list` entity, captioned in Grocy's language. */
+export function appUserfields(grocyLocale: string): AppUserfield[] {
+  const tx = grocyTexts(grocyLocale);
+  return FIELD_TYPES.map((f) => ({ name: f.name, caption: tx[f.key], type: f.type }));
+}
+
+/** Name of the list the Doctor creates, in Grocy's language. */
+export function defaultListName(grocyLocale: string): string {
+  return grocyTexts(grocyLocale).list;
+}
+
+/** Every caption the app may have written, in any language (others are the user's own). */
+const KNOWN_CAPTIONS = new Set<string>(
+  Object.values(GROCY_TEXTS).flatMap((tx) => [tx.price, tx.bestBefore, tx.aisle]),
+);
 
 export const USERFIELD_ENTITY = 'shopping_list';
-/** Name of the list the Doctor creates; stored in Grocy, so the same in every language. */
-export const DEFAULT_LIST_NAME = 'Shopping list';
 
 export type CheckStatus = 'ok' | 'warning' | 'missing' | 'error';
 
 export type Fix =
   | { kind: 'createUserfields'; fields: AppUserfield[] }
-  | { kind: 'createList' }
+  | { kind: 'renameUserfields'; fields: { id: number; name: string; caption: string }[] }
+  | { kind: 'createList'; name: string }
   | { kind: 'selectList'; listId: number; listName: string }
   | { kind: 'openSettings' };
 
@@ -34,11 +66,13 @@ export interface CheckupInput {
   server: { ok: true; version: string } | { ok: false; error: GrocyError };
   lists: NamedEntity[];
   selectedListId: number | null;
-  userfields: { entity: string; name: string; type: string }[];
+  userfields: { id: number; entity: string; name: string; type: string; caption: string }[];
   locations: NamedEntity[];
   /** « Emplacement des nouveaux produits » setting (null = Grocy preset). */
   newProductLocationId: number | null;
   units: number;
+  /** Grocy's `LOCALE` (e.g. 'en', 'fr'): language of what the app writes into Grocy. */
+  grocyLocale: string;
 }
 
 function majorVersion(v: string): number {
@@ -69,7 +103,7 @@ export function evaluateCheckup(input: CheckupInput): CheckResult[] {
   );
 
   if (input.lists.length === 0) {
-    results.push({ id: 'list', status: 'missing', label: m.noList, fix: { kind: 'createList' } });
+    results.push({ id: 'list', status: 'missing', label: m.noList, fix: { kind: 'createList', name: defaultListName(input.grocyLocale) } });
   } else {
     const selected = input.lists.find((l) => l.id === input.selectedListId);
     if (selected) {
@@ -85,9 +119,16 @@ export function evaluateCheckup(input: CheckupInput): CheckResult[] {
     }
   }
 
+  const wanted = appUserfields(input.grocyLocale);
   const mine = input.userfields.filter((f) => f.entity === USERFIELD_ENTITY);
-  const wrongType = APP_USERFIELDS.filter((f) => mine.some((m) => m.name === f.name && m.type !== f.type));
-  const missing = APP_USERFIELDS.filter((f) => !mine.some((m) => m.name === f.name));
+  const toRename = wanted.flatMap((f) => {
+    const cur = mine.find((x) => x.name === f.name);
+    return cur && cur.caption !== f.caption && KNOWN_CAPTIONS.has(cur.caption)
+      ? [{ id: cur.id, name: f.name, caption: f.caption }]
+      : [];
+  });
+  const wrongType = wanted.filter((f) => mine.some((m) => m.name === f.name && m.type !== f.type));
+  const missing = wanted.filter((f) => !mine.some((m) => m.name === f.name));
   if (wrongType.length > 0) {
     results.push({
       id: 'userfields',
@@ -101,7 +142,15 @@ export function evaluateCheckup(input: CheckupInput): CheckResult[] {
       status: 'missing',
       label: m.fieldsMissing,
       detail: missing.map((f) => f.caption).join(', '),
-      fix: { kind: 'createUserfields', fields: [...missing] },
+      fix: { kind: 'createUserfields', fields: missing },
+    });
+  } else if (toRename.length > 0) {
+    results.push({
+      id: 'userfields',
+      status: 'warning',
+      label: m.captionsOtherLanguage,
+      detail: toRename.map((f) => f.caption).join(', '),
+      fix: { kind: 'renameUserfields', fields: toRename },
     });
   } else {
     results.push({ id: 'userfields', status: 'ok', label: m.fieldsOk });
@@ -152,7 +201,9 @@ export function describeFix(fix: Fix): string {
   const m = t().checkup;
   switch (fix.kind) {
     case 'createList':
-      return m.fixCreateList(DEFAULT_LIST_NAME);
+      return m.fixCreateList(fix.name);
+    case 'renameUserfields':
+      return m.fixRenameFields(fix.fields.map((f) => f.caption).join(', '));
     case 'selectList':
       return m.fixSelectList(fix.listName);
     case 'createUserfields':

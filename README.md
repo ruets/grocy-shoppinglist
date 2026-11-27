@@ -44,13 +44,13 @@ is enough (with `tls internal`, install Caddy's local CA on the phone). Works on
 
 ### Data stored in Grocy
 
-The cart is shared between phones through Grocy. On each shopping-list line, the app uses three custom fields (userfields, entity `shopping_list`), visible and editable in Grocy's web UI:
+The cart is shared between phones through Grocy. On each shopping-list line, the app uses three custom fields (userfields, entity `shopping_list`), visible and editable in Grocy's web UI. The app only relies on the names; the captions follow Grocy's language (English shown, French in parentheses):
 
 | Name | Caption | Type | Content |
 |------|---------|------|---------|
-| `appprice` | Price paid (app) | number-decimal | price paid per stock unit |
-| `appbestbefore` | Best before (app) | date | best-before date (`2999-12-31` = never expires) |
-| `appaisle` | Aisle (app) | number-integral | product group id of an off-stock item (its aisle on the list) |
+| `appprice` | Price paid (app) (« Prix payé (app) ») | number-decimal | price paid per stock unit |
+| `appbestbefore` | Best before (app) (« DLC (app) ») | date | best-before date (`2999-12-31` = never expires) |
+| `appaisle` | Aisle (app) (« Rayon (app) ») | number-integral | product group id of an off-stock item (its aisle on the list) |
 
 A line is saved in two requests (the line, then `PUT /userfields/shopping_list/{id}`), and the list is read from `uihelper_shopping_list` and `shopping_list` in parallel. Empty or invalid values are read as "not set". Last write wins between phones; the 20 s auto refresh keeps them close.
 
@@ -58,11 +58,11 @@ The phone only keeps a per-line "already stocked" marker (AsyncStorage, 7 days) 
 
 ### Grocy checkup (« Grocy Doctor »)
 
-At startup the app checks Grocy (server and API key, version, selected shopping list, the three fields above, locations and units, the location for new products). If something is missing it shows « Vérification de Grocy » with the exact list of what it would do, and changes nothing until « Réparer » is tapped. It only adds (fields, a « Shopping list » list when there is none) or selects an existing list; it never edits or deletes anything in Grocy. A field with the app's name but another type is reported, to be fixed by hand. The « Grocy Doctor » button in Settings opens the same screen at any time.
+At startup the app checks Grocy (server and API key, version, selected shopping list, the three fields above, locations and units, the location for new products). If something is missing it shows « Vérification de Grocy » with the exact list of what it would do, and changes nothing until « Réparer » is tapped. It adds what is missing (fields, a list when there is none) or selects an existing list. The only edit it may offer is a caption change: when the app's field captions are not in Grocy's language (e.g. Grocy switched to French), the checkup shows a warning (not blocking, visible from the « Grocy Doctor » button) and « Réparer » renames the captions; names and values stay. A caption the user wrote themselves is left alone. It never deletes anything in Grocy. A field with the app's name but another type is reported, to be fixed by hand. The « Grocy Doctor » button in Settings opens the same screen at any time.
 
 ### Language
 
-The app is in French or English, following the phone's language settings (the first of the preferred languages that the app speaks; English otherwise). Prices and decimal numbers follow the language. Dates are always typed and shown day first (`DD/MM/YYYY`, quick entry `1203` = 12 March), and « jamais » / "never" both mean "never expires". What the app creates in Grocy is in English whatever the language: the field captions above and the « Shopping list » list. The currency is Grocy's own setting (`CURRENCY`, e.g. `GROCY_CURRENCY=EUR` for the Docker image).
+The app is in French or English, following the phone's language settings (the first of the preferred languages that the app speaks; English otherwise). Prices and decimal numbers follow the language. Dates are always typed and shown day first (`DD/MM/YYYY`, quick entry `1203` = 12 March), and « jamais » / "never" both mean "never expires". What the app writes into Grocy follows Grocy's own language (`LOCALE`), not the phone's, so every phone agrees: French when Grocy is in French, English otherwise (field captions above, and the list it creates: « Liste de courses » / « Shopping list »). The currency is Grocy's own setting (`CURRENCY`, e.g. `GROCY_CURRENCY=EUR` for the Docker image).
 
 ## Development
 

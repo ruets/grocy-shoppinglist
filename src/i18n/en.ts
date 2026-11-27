@@ -35,6 +35,7 @@ export const en: Messages = {
     wrongTypeHint: '. Fix or delete this field in Grocy (Manage master data → Userfields).',
     fieldsMissing: 'App fields missing',
     fieldsOk: 'App fields',
+    captionsOtherLanguage: 'Field captions not in Grocy’s language',
     metaOk: 'Locations and units',
     metaMissing: 'Location or unit missing',
     metaMissingHint: 'The app cannot create products until Grocy has some.',
@@ -45,6 +46,7 @@ export const en: Messages = {
     fixSelectList: (name: string) => `Use the list "${name}"`,
     fixCreateField: (caption: string) => `Create the field ${caption}`,
     fixCreateFields: (captions: string) => `Create the fields ${captions}`,
+    fixRenameFields: (captions: string) => `Rename the fields to ${captions}`,
     fixOpenSettings: 'Open settings',
   },
   grouping: {
@@ -111,6 +113,7 @@ export const en: Messages = {
     checking: 'Checking…',
     willDo: 'What will be done',
     onlyAdds: 'Nothing is changed or deleted in Grocy: the app only adds.',
+    captionsOnly: 'Only the field captions change: their values stay. Nothing is deleted in Grocy.',
     repair: 'Repair',
     rerun: 'Check again',
     continue: 'Continue',
@@ -197,7 +200,7 @@ export const en: Messages = {
     newLocationHint: 'Products created from the app go there, to be moved later in Grocy.',
     diagnostic: 'Diagnostics',
     doctor: 'Grocy Doctor',
-    doctorHint: 'Checks that Grocy has everything the app needs, and offers to add it.',
+    doctorHint: 'Checks that Grocy has everything the app needs, and offers to fix it.',
   },
   common: {
     loading: 'Loading Grocy…',

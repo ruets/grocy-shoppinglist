@@ -72,6 +72,7 @@ export interface Userfield {
   entity: string;
   name: string;
   type: string;
+  caption: string;
 }
 
 export interface BarcodeProductDetails {
@@ -343,7 +344,18 @@ export class GrocyClient {
 
   async getUserfields(): Promise<Userfield[]> {
     const rows = await this.request<any[]>('GET', '/objects/userfields');
-    return (rows ?? []).map((r) => ({ id: toInt(r.id), entity: String(r.entity), name: String(r.name), type: String(r.type) }));
+    return (rows ?? []).map((r) => ({
+      id: toInt(r.id),
+      entity: String(r.entity),
+      name: String(r.name),
+      type: String(r.type),
+      caption: String(r.caption ?? ''),
+    }));
+  }
+
+  /** Changes only a userfield's caption; its name, type and values stay. */
+  async setUserfieldCaption(id: number, caption: string): Promise<void> {
+    await this.request('PUT', `/objects/userfields/${id}`, { caption });
   }
 
   async createUserfield(f: { name: string; caption: string; type: string }): Promise<number> {
