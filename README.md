@@ -48,9 +48,9 @@ The cart is shared between phones through Grocy. On each shopping-list line, the
 
 | Name | Caption | Type | Content |
 |------|---------|------|---------|
-| `appprix` | Price paid (app) | number-decimal | price paid per stock unit |
-| `appdlc` | Best before (app) | date | best-before date (`2999-12-31` = never expires) |
-| `apprayon` | Aisle (app) | number-integral | product group id of an off-stock item (its aisle on the list) |
+| `appprice` | Price paid (app) | number-decimal | price paid per stock unit |
+| `appbestbefore` | Best before (app) | date | best-before date (`2999-12-31` = never expires) |
+| `appaisle` | Aisle (app) | number-integral | product group id of an off-stock item (its aisle on the list) |
 
 A line is saved in two requests (the line, then `PUT /userfields/shopping_list/{id}`), and the list is read from `uihelper_shopping_list` and `shopping_list` in parallel. Empty or invalid values are read as "not set". Last write wins between phones; the 20 s auto refresh keeps them close.
 

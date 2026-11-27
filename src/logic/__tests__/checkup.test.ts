@@ -59,25 +59,25 @@ describe('evaluateCheckup', () => {
   });
 
   it('one field missing → fix creates only that field', () => {
-    const r = evaluateCheckup(input({ userfields: allFields.filter((f) => f.name !== 'appdlc') }));
+    const r = evaluateCheckup(input({ userfields: allFields.filter((f) => f.name !== 'appbestbefore') }));
     expect(byId(r, 'userfields').status).toBe('missing');
     const fix = pendingFixes(r).find((f) => f.kind === 'createUserfields');
-    expect(fix).toEqual({ kind: 'createUserfields', fields: APP_USERFIELDS.filter((f) => f.name === 'appdlc') });
+    expect(fix).toEqual({ kind: 'createUserfields', fields: APP_USERFIELDS.filter((f) => f.name === 'appbestbefore') });
   });
 
   it('field with the wrong type → error, no fix', () => {
-    const fields = allFields.map((f) => (f.name === 'appprix' ? { ...f, type: 'text-single-line' } : f));
+    const fields = allFields.map((f) => (f.name === 'appprice' ? { ...f, type: 'text-single-line' } : f));
     const r = evaluateCheckup(input({ userfields: fields }));
     expect(byId(r, 'userfields').status).toBe('error');
-    expect(byId(r, 'userfields').detail).toContain('appprix');
+    expect(byId(r, 'userfields').detail).toContain('appprice');
     expect(pendingFixes(r)).toEqual([]);
     expect(isBlocking(r)).toBe(true);
   });
 
   it('wrong type and another missing → error, missing one still not fixed automatically', () => {
     const fields = allFields
-      .filter((f) => f.name !== 'apprayon')
-      .map((f) => (f.name === 'appprix' ? { ...f, type: 'text-single-line' } : f));
+      .filter((f) => f.name !== 'appaisle')
+      .map((f) => (f.name === 'appprice' ? { ...f, type: 'text-single-line' } : f));
     const r = evaluateCheckup(input({ userfields: fields }));
     expect(byId(r, 'userfields').status).toBe('error');
     expect(pendingFixes(r)).toEqual([]);

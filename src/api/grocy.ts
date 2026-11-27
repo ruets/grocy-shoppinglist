@@ -184,7 +184,7 @@ function lineFields(uf: any): Pick<ShoppingLine, 'paid_price' | 'best_before' | 
 }
 
 /** Userfield names on the `shopping_list` entity (see logic/checkup APP_USERFIELDS). */
-export const UF = { price: 'appprix', bestBefore: 'appdlc', aisle: 'apprayon' } as const;
+export const UF = { price: 'appprice', bestBefore: 'appbestbefore', aisle: 'appaisle' } as const;
 
 export function normalizeBaseUrl(raw: string): string {
   let url = raw.trim();

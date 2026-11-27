@@ -40,9 +40,9 @@
 
 ### 1. Userfields on shopping-list lines
 - Entity `shopping_list`, not shown as table columns:
-  - `appprix` — « Price paid (app) », `number-decimal`: price paid per stock unit.
-  - `appdlc` — « Best before (app) », `date`: best-before date (`2999-12-31` = never expires).
-  - `apprayon` — « Aisle (app) », `number-integral`: product group id, for off-stock items (used from delivery 2; created now so the checkup is complete).
+  - `appprice` — « Price paid (app) », `number-decimal`: price paid per stock unit.
+  - `appbestbefore` — « Best before (app) », `date`: best-before date (`2999-12-31` = never expires).
+  - `appaisle` — « Aisle (app) », `number-integral`: product group id, for off-stock items (used from delivery 2; created now so the checkup is complete).
 - The `note` stays a plain note (user note for a product, item name for free text).
 - Checked state stays Grocy's `done`.
 - Tolerance: an empty or non-parsable value is read as "not set".
@@ -60,7 +60,7 @@
   1. Server reachable and API key valid (`GET /system/info`) — not fixable by the app → go to Settings.
   2. Grocy version ≥ 4.0 — warning only.
   3. The selected shopping list exists (at least one list) — fixable: create « Shopping list ».
-  4. Userfields `appprix`, `appdlc`, `apprayon` exist on `shopping_list` — fixable: create them.
+  4. Userfields `appprice`, `appbestbefore`, `appaisle` exist on `shopping_list` — fixable: create them.
   5. A field with the app's name but the wrong type — error, not fixable (would lose data): explain to fix or delete it in Grocy.
   6. At least one location and one quantity unit (needed to create products) — warning, not fixed by the app.
 - **Startup:** before the list screen, a short « Vérification de Grocy… » step runs the checks. All ok (warnings allowed) → list. Otherwise the « Vérification de Grocy » screen opens; **nothing is changed without asking**: it lists exactly what it would do (« Créer les champs Price paid (app), Best before (app) », « Créer la liste « Shopping list » », « Utiliser la liste « X » ») and waits for « Réparer ». Until then the list is not shown (the app cannot save without the fields); « Réglages » stays available.
