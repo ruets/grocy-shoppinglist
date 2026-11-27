@@ -22,6 +22,20 @@ export function SettingsScreen(props: { onDone: () => void; canClose: boolean; o
   const [saving, setSaving] = React.useState(false);
   const [status, setStatus] = React.useState<{ ok: boolean; text: string } | null>(null);
 
+  // Fresh locations on open: the loaded ones may be stale (one deleted in Grocy).
+  React.useEffect(() => {
+    const client = useStore.getState().client;
+    if (!client) return;
+    let alive = true;
+    client
+      .getLocations()
+      .then((locs) => alive && setLocations(locs))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const test = async () => {
     setTesting(true);
     setStatus(null);
